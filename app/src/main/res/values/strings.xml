@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Bodo Keyboard</string>
+    <string name="keyboard_name">Bodo Devanagari Keyboard</string>
+    <string name="settings_title">Bodo Keyboard Settings</string>
+</resources>
