@@ -46,7 +46,6 @@ import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.InsertEmoticon
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -55,11 +54,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -663,6 +660,10 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
     // -1 = Recently Used tab, 0..7 = index into EMOJI_CATEGORIES.
     var selectedCategory by remember { mutableIntStateOf(-1) }
     var searchQuery by remember { mutableStateOf("") }
+    // The search field has no real text-input source (this view IS the keyboard),
+    // so typing into it is driven by a small in-panel QWERTY row instead of the
+    // system text-input/IME machinery.
+    var isSearching by remember { mutableStateOf(false) }
 
     val searchResults: List<String>? = searchQuery.trim().takeIf { it.isNotEmpty() }?.let { q ->
         EMOJI_KEYWORDS.entries.filter { it.key.contains(q, ignoreCase = true) }
@@ -677,10 +678,15 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
         onKeyClick(emoji)
     }
 
+    fun closeSearch() {
+        isSearching = false
+        searchQuery = ""
+    }
+
     Column(
         modifier = Modifier
             .background(KbBg)
-            .height(280.dp)
+            .height(if (isSearching) 340.dp else 280.dp)
     ) {
         // Search bar
         Box(
@@ -690,6 +696,7 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                 .height(36.dp)
                 .clip(RoundedCornerShape(18.dp))
                 .background(KeySpec)
+                .clickable(enabled = !isSearching) { isSearching = true }
         ) {
             Row(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
@@ -700,58 +707,68 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                 Box(modifier = Modifier.weight(1f)) {
                     if (searchQuery.isEmpty()) {
                         Text("Search emoji", color = ToolTxt, fontSize = 14.sp)
+                    } else {
+                        Text(searchQuery, color = Color.White, fontSize = 14.sp)
                     }
-                    BasicTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        singleLine = true,
-                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
-                        cursorBrush = SolidColor(Color.White),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                }
+                if (isSearching) {
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(ChipShape)
+                            .background(DividerC)
+                            .clickable { closeSearch() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("✕", color = SuggTxt, fontSize = 11.sp)
+                    }
                 }
             }
         }
 
-        // Category tab row
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(KeySpec)
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            item {
-                EmojiTab(
-                    icon       = Icons.Default.AccessTime,
-                    isSelected = selectedCategory == -1 && searchQuery.isEmpty(),
-                    onClick    = { selectedCategory = -1; searchQuery = "" }
-                )
+        if (!isSearching) {
+            // Category tab row
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(KeySpec)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                item {
+                    EmojiTab(
+                        icon       = Icons.Default.AccessTime,
+                        isSelected = selectedCategory == -1,
+                        onClick    = { selectedCategory = -1 }
+                    )
+                }
+                itemsIndexed(EMOJI_CATEGORY_ICONS) { idx, icon ->
+                    EmojiTab(
+                        icon       = icon,
+                        isSelected = selectedCategory == idx,
+                        onClick    = { selectedCategory = idx }
+                    )
+                }
             }
-            itemsIndexed(EMOJI_CATEGORY_ICONS) { idx, icon ->
-                EmojiTab(
-                    icon       = icon,
-                    isSelected = selectedCategory == idx && searchQuery.isEmpty(),
-                    onClick    = { selectedCategory = idx; searchQuery = "" }
-                )
-            }
-        }
 
-        if (searchResults == null && selectedCategory == -1) {
-            Text(
-                "RECENTLY USED",
-                color = ToolTxt,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 10.dp, top = 6.dp, bottom = 2.dp)
-            )
+            if (selectedCategory == -1) {
+                Text(
+                    "RECENTLY USED",
+                    color = ToolTxt,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 10.dp, top = 6.dp, bottom = 2.dp)
+                )
+            }
         }
 
         // Emoji grid
         if (displayedEmojis.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = if (searchResults != null) "No matching emoji" else "No recently used emoji",
+                    text = if (searchResults != null) "No matching emoji"
+                           else if (isSearching) "Type to search emoji"
+                           else "No recently used emoji",
                     color = ToolTxt,
                     fontSize = 13.sp
                 )
@@ -776,32 +793,71 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
             }
         }
 
-        // Bottom bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .background(KeySpec)
-                .padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            KeyButton(
-                key = "ABC", modifier = Modifier.size(42.dp),
-                mode = KeyboardMode.EMOJI, isCapsLock = false, viewModel = viewModel,
-                onClick = { onKeyClick("ABC") }
+        if (isSearching) {
+            // Mini QWERTY for typing the search query — key presses update
+            // searchQuery locally and are never sent to the host app.
+            val searchRows = listOf(
+                listOf("q", "w", "e", "r", "t", "y", "u", "i", "o", "p"),
+                listOf("a", "s", "d", "f", "g", "h", "j", "k", "l"),
+                listOf("z", "x", "c", "v", "b", "n", "m", "BACKSPACE")
             )
-            ToolBtn(icon = Icons.Default.ContentPaste)            { onKeyClick("PASTE") }
-            ToolBtn(icon = Icons.Default.EmojiEmotions, isHighlight = true) { /* current panel */ }
-            ToolBtn(icon = Icons.Default.InsertEmoticon)          { /* stickers not yet implemented */ }
-            ToolBtn(icon = Icons.AutoMirrored.Filled.Chat)        { /* chat emoji not yet implemented */ }
-            ToolBtn(label = "GIF")                                { onKeyClick("GIF_SWITCH") }
-            ToolBtn(label = ":-)")                                { /* kaomoji not yet implemented */ }
-            KeyButton(
-                key = "BACKSPACE", modifier = Modifier.size(42.dp),
-                mode = KeyboardMode.EMOJI, isCapsLock = false, viewModel = viewModel,
-                onClick = { onKeyClick("BACKSPACE") }
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 2.dp, vertical = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                searchRows.forEachIndexed { rowIdx, row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (rowIdx == 1) Spacer(Modifier.weight(0.5f))
+                        row.forEach { key ->
+                            KeyButton(
+                                key = key,
+                                modifier = Modifier.weight(if (key == "BACKSPACE") 1.9f else 1f),
+                                mode = KeyboardMode.ENGLISH,
+                                isCapsLock = false,
+                                viewModel = viewModel,
+                                onClick = {
+                                    searchQuery = if (key == "BACKSPACE") searchQuery.dropLast(1)
+                                                  else searchQuery + key
+                                }
+                            )
+                        }
+                        if (rowIdx == 1) Spacer(Modifier.weight(0.5f))
+                    }
+                }
+            }
+        } else {
+            // Bottom bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .background(KeySpec)
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                KeyButton(
+                    key = "ABC", modifier = Modifier.size(42.dp),
+                    mode = KeyboardMode.EMOJI, isCapsLock = false, viewModel = viewModel,
+                    onClick = { onKeyClick("ABC") }
+                )
+                ToolBtn(icon = Icons.Default.ContentPaste)            { onKeyClick("PASTE") }
+                ToolBtn(icon = Icons.Default.EmojiEmotions, isHighlight = true) { /* current panel */ }
+                ToolBtn(icon = Icons.Default.InsertEmoticon)          { /* stickers not yet implemented */ }
+                ToolBtn(icon = Icons.AutoMirrored.Filled.Chat)        { /* chat emoji not yet implemented */ }
+                ToolBtn(label = "GIF")                                { onKeyClick("GIF_SWITCH") }
+                ToolBtn(label = ":-)")                                { /* kaomoji not yet implemented */ }
+                KeyButton(
+                    key = "BACKSPACE", modifier = Modifier.size(42.dp),
+                    mode = KeyboardMode.EMOJI, isCapsLock = false, viewModel = viewModel,
+                    onClick = { onKeyClick("BACKSPACE") }
+                )
+            }
         }
     }
 }
