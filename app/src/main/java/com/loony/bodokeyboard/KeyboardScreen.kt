@@ -28,6 +28,14 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.KeyboardReturn
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -276,7 +284,7 @@ fun KeyboardScreen(
                                     modifier    = Modifier.weight(
                                         when (key) {
                                             "SPACE"                          -> 5.5f
-                                            "BACKSPACE", "ENTER", "SHIFT",
+                                            "BACKSPACE", "ENTER", "SHIFT"    -> 1.9f
                                             "SYM", "ABC", "MODE_SWITCH"      -> 1.55f
                                             "SYM_PAGE"                       -> 1.2f
                                             ".com"                           -> 1.2f
@@ -738,28 +746,34 @@ fun KeyButton(
     val height = (if (key in setOf("SPACE", "SYM", "ABC", "MODE_SWITCH", "ENTER", ",", ".", "@", ".com", "।", "EMOJI_SWITCH")) 45.dp else 45.dp) *
             (viewModel?.keyboardHeightMultiplier?.value ?: 1f)
 
-    val label = when (key) {
-        "BACKSPACE"    -> "⌫"
-        "ENTER"        -> {
+    // Icon-bearing keys render a vector icon instead of a text glyph.
+    val icon: ImageVector? = when (key) {
+        "BACKSPACE" -> Icons.AutoMirrored.Filled.Backspace
+        "ENTER"     -> {
             val inputType = viewModel?.editorInfo?.inputType ?: 0
             val isMultiLine = (inputType and EditorInfo.TYPE_TEXT_FLAG_MULTI_LINE) != 0
             if (isMultiLine) {
-                "↵"
+                Icons.AutoMirrored.Filled.KeyboardReturn
             } else {
                 when (viewModel?.imeAction?.value) {
-                    EditorInfo.IME_ACTION_SEARCH -> "🔍"
-                    EditorInfo.IME_ACTION_SEND   -> "➤"
-                    EditorInfo.IME_ACTION_GO     -> "➡"
-                    EditorInfo.IME_ACTION_DONE   -> "✓"
-                    else                         -> "↵"
+                    EditorInfo.IME_ACTION_SEARCH -> Icons.Default.Search
+                    EditorInfo.IME_ACTION_SEND   -> Icons.AutoMirrored.Filled.Send
+                    EditorInfo.IME_ACTION_GO     -> Icons.AutoMirrored.Filled.ArrowForward
+                    EditorInfo.IME_ACTION_DONE   -> Icons.Default.Done
+                    else                         -> Icons.AutoMirrored.Filled.KeyboardReturn
                 }
             }
         }
-        "SHIFT"        -> when {
-            isCapsLock                   -> "⇪"
-            mode == KeyboardMode.BODO    -> "आ/क"
-            else                         -> "⇧"
+        "SHIFT"     -> when {
+            isCapsLock                -> Icons.Default.KeyboardDoubleArrowUp
+            mode == KeyboardMode.BODO -> null // Bodo shift uses a text label, not an icon
+            else                      -> Icons.Default.ArrowUpward
         }
+        else -> null
+    }
+
+    val label = when (key) {
+        "SHIFT"        -> if (mode == KeyboardMode.BODO && !isCapsLock) "आ/क" else ""
         "SPACE"        -> when (mode) {
             KeyboardMode.BODO     -> "बर'"
             KeyboardMode.TRANSLIT -> "बर' (Translit)"
@@ -775,7 +789,8 @@ fun KeyButton(
     }
 
     val fontSize = when {
-        key == "SHIFT" && mode == KeyboardMode.BODO -> 11.sp
+        key == "SHIFT" && mode == KeyboardMode.BODO -> 13.sp
+        key == "SHIFT" || key == "BACKSPACE" || key == "ENTER" -> 22.sp
         key == "MODE_SWITCH" || key == "SYM" || key == "ABC" -> 14.sp
         key == "SPACE"         -> 13.sp
         key.length > 2         -> 12.sp
@@ -820,17 +835,26 @@ fun KeyButton(
                 }
             )
     ) {
-        // Key label — centred
-        Text(
-            text       = label,
-            modifier   = Modifier.align(Alignment.Center),
-            fontSize   = fontSize,
-            fontWeight = when (key) {
-                "MODE_SWITCH", "SYM", "ABC" -> FontWeight.SemiBold
-                else                         -> FontWeight.Normal
-            },
-            color = KeyTxt
-        )
+        // Key content — icon when available, otherwise a centred text label
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = KeyTxt,
+                modifier = Modifier.align(Alignment.Center).size(22.dp)
+            )
+        } else {
+            Text(
+                text       = label,
+                modifier   = Modifier.align(Alignment.Center),
+                fontSize   = fontSize,
+                fontWeight = when (key) {
+                    "MODE_SWITCH", "SYM", "ABC" -> FontWeight.SemiBold
+                    else                         -> FontWeight.Normal
+                },
+                color = KeyTxt
+            )
+        }
 
         // Number hint — top-right corner
         if (hint != null) {

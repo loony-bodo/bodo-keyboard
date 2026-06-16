@@ -13,3 +13,5 @@ node_modules/
 *.iws
 *.ipr
 /out
+/pictures
+notes.txt
