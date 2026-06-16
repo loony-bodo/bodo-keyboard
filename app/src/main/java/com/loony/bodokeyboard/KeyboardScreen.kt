@@ -36,6 +36,17 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.SportsSoccer
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.InsertEmoticon
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -44,9 +55,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -243,7 +256,7 @@ fun KeyboardScreen(
             .background(KbBg)
     ) {
         when (mode) {
-            KeyboardMode.EMOJI  -> EmojiKeyboard(onKeyClick)
+            KeyboardMode.EMOJI  -> EmojiKeyboard(viewModel, onKeyClick)
             KeyboardMode.GIF    -> GifKeyboard(onKeyClick)
             else -> {
                 // ── Suggestion / Alternates bar ──────────────────────────────────
@@ -587,16 +600,119 @@ private val EMOJI_CATEGORIES = listOf(
     ),
 )
 
+// Material icon shown on each category tab, in the same order as EMOJI_CATEGORIES above.
+private val EMOJI_CATEGORY_ICONS = listOf(
+    Icons.Default.EmojiEmotions,  // smileys
+    Icons.Default.Person,         // people
+    Icons.Default.Pets,           // animals & nature
+    Icons.Default.Restaurant,     // food & drink
+    Icons.Default.SportsSoccer,   // activities
+    Icons.Default.DirectionsCar,  // travel & places
+    Icons.Default.Lightbulb,      // objects
+    Icons.Default.Favorite,       // symbols
+)
+
+// Small hand-curated keyword → emoji map backing the search bar.
+// Coverage is partial by design — there's no bundled emoji-name dataset in this app.
+private val EMOJI_KEYWORDS: Map<String, List<String>> = mapOf(
+    "smile" to listOf("😀", "😊", "🙂"), "laugh" to listOf("😂", "🤣"),
+    "love" to listOf("❤️", "😍", "😘"), "heart" to listOf("❤️", "💛", "💚", "💙", "💜"),
+    "cry" to listOf("😢", "😭"), "sad" to listOf("😞", "😔", "🙁"),
+    "angry" to listOf("😠", "😡", "🤬"), "cool" to listOf("😎"),
+    "wink" to listOf("😉"), "kiss" to listOf("😘", "💋"),
+    "fire" to listOf("🔥"), "star" to listOf("⭐", "🌟", "✨"),
+    "sun" to listOf("☀️", "🌞"), "moon" to listOf("🌙", "🌝"),
+    "dog" to listOf("🐶"), "cat" to listOf("🐱"),
+    "fox" to listOf("🦊"), "bear" to listOf("🐻"),
+    "panda" to listOf("🐼"), "lion" to listOf("🦁"),
+    "monkey" to listOf("🐵"), "bird" to listOf("🐦"),
+    "fish" to listOf("🐟"), "flower" to listOf("🌸", "🌹", "🌻"),
+    "tree" to listOf("🌳", "🌲"), "pizza" to listOf("🍕"),
+    "burger" to listOf("🍔"), "coffee" to listOf("☕"),
+    "tea" to listOf("🍵"), "beer" to listOf("🍺"),
+    "wine" to listOf("🍷"), "cake" to listOf("🎂", "🍰"),
+    "apple" to listOf("🍎"), "banana" to listOf("🍌"),
+    "soccer" to listOf("⚽"), "football" to listOf("🏈"),
+    "basketball" to listOf("🏀"), "tennis" to listOf("🎾"),
+    "car" to listOf("🚗"), "plane" to listOf("✈️"),
+    "rocket" to listOf("🚀"), "train" to listOf("🚆"),
+    "bike" to listOf("🚲"), "phone" to listOf("📱"),
+    "computer" to listOf("💻"), "camera" to listOf("📷"),
+    "clock" to listOf("⏰", "🕰️"), "lock" to listOf("🔒"),
+    "key" to listOf("🔑"), "bulb" to listOf("💡"),
+    "gear" to listOf("⚙️"), "money" to listOf("💵", "💰"),
+    "gift" to listOf("🎁"), "party" to listOf("🎉", "🥳"),
+    "balloon" to listOf("🎈"), "trophy" to listOf("🏆"),
+    "medal" to listOf("🥇"), "robot" to listOf("🤖"),
+    "ghost" to listOf("👻"), "skull" to listOf("💀"),
+    "ok" to listOf("👌"), "thumbsup" to listOf("👍"),
+    "thumbsdown" to listOf("👎"), "clap" to listOf("👏"),
+    "pray" to listOf("🙏"), "muscle" to listOf("💪"),
+    "eye" to listOf("👀"), "baby" to listOf("👶"),
+    "king" to listOf("🤴"), "queen" to listOf("👸"),
+    "crown" to listOf("👑"), "check" to listOf("✅"),
+    "cross" to listOf("❌"), "warning" to listOf("⚠️"),
+    "question" to listOf("❓"), "music" to listOf("🎵", "🎶"),
+    "book" to listOf("📖"), "pencil" to listOf("✏️"),
+    "scissors" to listOf("✂️"), "trash" to listOf("🗑️"),
+    "gem" to listOf("💎"),
+)
+
 @Composable
-fun EmojiKeyboard(onKeyClick: (String) -> Unit) {
-    var selectedCategory by remember { mutableIntStateOf(0) }
-    val emojis = EMOJI_CATEGORIES[selectedCategory].second
+fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
+    // -1 = Recently Used tab, 0..7 = index into EMOJI_CATEGORIES.
+    var selectedCategory by remember { mutableIntStateOf(-1) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val searchResults: List<String>? = searchQuery.trim().takeIf { it.isNotEmpty() }?.let { q ->
+        EMOJI_KEYWORDS.entries.filter { it.key.contains(q, ignoreCase = true) }
+            .flatMap { it.value }.distinct()
+    }
+
+    val displayedEmojis: List<String> = searchResults
+        ?: if (selectedCategory == -1) viewModel.recentEmojis else EMOJI_CATEGORIES[selectedCategory].second
+
+    fun handleEmojiClick(emoji: String) {
+        viewModel.addRecentEmoji(emoji)
+        onKeyClick(emoji)
+    }
 
     Column(
         modifier = Modifier
             .background(KbBg)
             .height(280.dp)
     ) {
+        // Search bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+                .height(36.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(KeySpec)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Search, contentDescription = null, tint = ToolTxt, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Box(modifier = Modifier.weight(1f)) {
+                    if (searchQuery.isEmpty()) {
+                        Text("Search emoji", color = ToolTxt, fontSize = 14.sp)
+                    }
+                    BasicTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        singleLine = true,
+                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                        cursorBrush = SolidColor(Color.White),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
         // Category tab row
         LazyRow(
             modifier = Modifier
@@ -605,36 +721,57 @@ fun EmojiKeyboard(onKeyClick: (String) -> Unit) {
                 .padding(horizontal = 4.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            itemsIndexed(EMOJI_CATEGORIES) { idx, (icon, _) ->
-                val isSelected = idx == selectedCategory
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (isSelected) EnterBg.copy(alpha = 0.25f) else Color.Transparent)
-                        .clickable { selectedCategory = idx },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(icon, fontSize = 18.sp)
-                }
+            item {
+                EmojiTab(
+                    icon       = Icons.Default.AccessTime,
+                    isSelected = selectedCategory == -1 && searchQuery.isEmpty(),
+                    onClick    = { selectedCategory = -1; searchQuery = "" }
+                )
+            }
+            itemsIndexed(EMOJI_CATEGORY_ICONS) { idx, icon ->
+                EmojiTab(
+                    icon       = icon,
+                    isSelected = selectedCategory == idx && searchQuery.isEmpty(),
+                    onClick    = { selectedCategory = idx; searchQuery = "" }
+                )
             }
         }
 
+        if (searchResults == null && selectedCategory == -1) {
+            Text(
+                "RECENTLY USED",
+                color = ToolTxt,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 10.dp, top = 6.dp, bottom = 2.dp)
+            )
+        }
+
         // Emoji grid
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(7),
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(4.dp)
-        ) {
-            items(emojis) { emoji ->
-                Box(
-                    modifier = Modifier
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable { onKeyClick(emoji) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(emoji, fontSize = 28.sp)
+        if (displayedEmojis.isEmpty()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = if (searchResults != null) "No matching emoji" else "No recently used emoji",
+                    color = ToolTxt,
+                    fontSize = 13.sp
+                )
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(7),
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(4.dp)
+            ) {
+                items(displayedEmojis) { emoji ->
+                    Box(
+                        modifier = Modifier
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { handleEmojiClick(emoji) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(emoji, fontSize = 28.sp)
+                    }
                 }
             }
         }
@@ -643,20 +780,48 @@ fun EmojiKeyboard(onKeyClick: (String) -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                .height(48.dp)
+                .background(KeySpec)
+                .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             KeyButton(
-                key = "ABC", modifier = Modifier.weight(1f),
-                mode = KeyboardMode.EMOJI, isCapsLock = false, viewModel = null,
+                key = "ABC", modifier = Modifier.size(42.dp),
+                mode = KeyboardMode.EMOJI, isCapsLock = false, viewModel = viewModel,
                 onClick = { onKeyClick("ABC") }
             )
+            ToolBtn(icon = Icons.Default.ContentPaste)            { onKeyClick("PASTE") }
+            ToolBtn(icon = Icons.Default.EmojiEmotions, isHighlight = true) { /* current panel */ }
+            ToolBtn(icon = Icons.Default.InsertEmoticon)          { /* stickers not yet implemented */ }
+            ToolBtn(icon = Icons.AutoMirrored.Filled.Chat)        { /* chat emoji not yet implemented */ }
+            ToolBtn(label = "GIF")                                { onKeyClick("GIF_SWITCH") }
+            ToolBtn(label = ":-)")                                { /* kaomoji not yet implemented */ }
             KeyButton(
-                key = "BACKSPACE", modifier = Modifier.weight(1f),
-                mode = KeyboardMode.EMOJI, isCapsLock = false, viewModel = null,
+                key = "BACKSPACE", modifier = Modifier.size(42.dp),
+                mode = KeyboardMode.EMOJI, isCapsLock = false, viewModel = viewModel,
                 onClick = { onKeyClick("BACKSPACE") }
             )
         }
+    }
+}
+
+@Composable
+private fun EmojiTab(icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (isSelected) EnterBg.copy(alpha = 0.25f) else Color.Transparent)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (isSelected) EnterBg else Color.White,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
 

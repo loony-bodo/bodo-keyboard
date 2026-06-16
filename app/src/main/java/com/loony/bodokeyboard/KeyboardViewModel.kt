@@ -3,6 +3,7 @@ package com.loony.bodokeyboard
 import android.content.Context
 import android.view.inputmethod.EditorInfo
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 
@@ -42,6 +43,17 @@ class KeyboardViewModel : ViewModel() {
 
     private val _keyboardMode = mutableStateOf(KeyboardMode.BODO)
     val keyboardMode: State<KeyboardMode> = _keyboardMode
+
+    // ── Emoji panel ───────────────────────────────────────────────────────────
+
+    /** Most-recently-used emoji, newest first. Kept in memory only. */
+    val recentEmojis = mutableStateListOf<String>()
+
+    fun addRecentEmoji(emoji: String) {
+        recentEmojis.remove(emoji)
+        recentEmojis.add(0, emoji)
+        while (recentEmojis.size > 30) recentEmojis.removeAt(recentEmojis.size - 1)
+    }
 
     // ── Transliteration ───────────────────────────────────────────────────────
 
