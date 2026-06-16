@@ -293,6 +293,8 @@ class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, Saved
                 startActivity(intent)
             }
 
+            "COLLAPSE" -> requestHideSelf(0)
+
             else -> {
                 if (viewModel.isTranslitMode()) {
                     // Non-letter key in translit mode (punctuation, numbers):

@@ -22,6 +22,13 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -161,27 +169,27 @@ fun KeyboardScreen(
     val isTranslit = mode == KeyboardMode.TRANSLIT
 
     val bodoBottomRow = if (isEmailField)
-        listOf("SYM", "MODE_SWITCH", "SPACE", "@", "ENTER")
+        listOf("SYM", ",", "SPACE", "@", "ENTER")
     else
-        listOf("SYM", "MODE_SWITCH", "SPACE", "।", "ENTER")
+        listOf("SYM", ",", "SPACE", "।", "ENTER")
 
     val englishBottomRow = if (isEmailField)
-        listOf("SYM", "MODE_SWITCH", "SPACE", "@", ".com", "ENTER")
+        listOf("SYM", ",", "SPACE", "@", ".com", "ENTER")
     else
-        listOf("SYM", "MODE_SWITCH", "SPACE", ",", ".", "ENTER")
+        listOf("SYM", ",", "SPACE", ".", "ENTER")
 
     val rows = when {
         isSymbols2 -> listOf(
             listOf("~", "`", "|", "•", "√", "π", "÷", "×", "{", "}"),
             listOf("£", "¢", "€", "¥", "^", "°", "=", "_", "\\"),
             listOf("SYM_PAGE", "[", "]", "«", "»", "!", "?", "BACKSPACE"),
-            listOf("ABC", "MODE_SWITCH", "SPACE", ",", ".", "ENTER")
+            listOf("ABC", ",", "SPACE", ".", "ENTER")
         )
         isSymbols -> listOf(
             listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0"),
             listOf("@", "#", "₹", "%", "&", "-", "+", "(", ")"),
             listOf("SYM_PAGE", "*", "\"", "'", ":", ";", "!", "?", "BACKSPACE"),
-            listOf("ABC", "MODE_SWITCH", "SPACE", ",", ".", "ENTER")
+            listOf("ABC", ",", "SPACE", ".", "ENTER")
         )
         isTranslit -> if (!isShifted) listOf(
             listOf("q", "w", "e", "r", "t", "y", "u", "i", "o", "p"),
@@ -298,46 +306,61 @@ fun KeyboardScreen(
 }
 
 // ── Toolbar row ───────────────────────────────────────────────────────────────
+private val ToolIconSize = 22.dp
+
 @Composable
 private fun ToolbarRow(mode: KeyboardMode, onKeyClick: (String) -> Unit) {
-    val isTranslit = mode == KeyboardMode.TRANSLIT
-    val modeLabel  = when (mode) {
-        KeyboardMode.BODO    -> "EN"
-        KeyboardMode.ENGLISH -> "बर'"
-        KeyboardMode.TRANSLIT-> "बर'"
-        else                 -> "EN"
-    }
+    val modeLabel = if (mode == KeyboardMode.BODO) "EN" else "बर'"
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(44.dp)
-            .background(KbBg),
+            .background(KbBg)
+            .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Start
+        horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        Box(modifier = Modifier.width(44.dp), contentAlignment = Alignment.Center) {
-            Text(">", color = ToolTxt, fontSize = 20.sp) // Gboard chevron
+        // Collapse / back chevron, circled
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .clip(ChipShape)
+                .background(EnterBg.copy(alpha = 0.25f))
+                .clickable { onKeyClick("COLLAPSE") },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Collapse",
+                tint = EnterBg,
+                modifier = Modifier.size(ToolIconSize)
+            )
         }
-        ToolBtn("😊") { onKeyClick("EMOJI_SWITCH") }
-        ToolBtn(modeLabel, isBold = true) { onKeyClick("MODE_SWITCH") }
-        // Transliteration toggle — highlighted when active
-        ToolBtn(
-            label       = "TR",
-            isBold      = true,
-            isHighlight = isTranslit,
-        ) { onKeyClick("TRANSLIT_TOGGLE") }
-        ToolBtn("GIF") { onKeyClick("GIF_SWITCH") }
-        ToolBtn("⚙")   { onKeyClick("SETTINGS_OPEN") }
+        // EN / बर' toggle — swaps keyboard between English and Bodo
+        ToolBtn(label = modeLabel) { onKeyClick("MODE_SWITCH") }
+        ToolBtn(icon = Icons.Default.EmojiEmotions)  { onKeyClick("EMOJI_SWITCH") }
+        ToolBtn(label = "GIF")                       { onKeyClick("GIF_SWITCH") }
+        ToolBtn(icon = Icons.Default.ContentPaste)   { onKeyClick("PASTE") }
+
+        Box(
+            Modifier
+                .width(1.dp)
+                .height(24.dp)
+                .background(DividerC)
+        )
+
+        ToolBtn(icon = Icons.Default.MoreHoriz)      { onKeyClick("SETTINGS_OPEN") }
+        ToolBtn(icon = Icons.Default.Mic)            { /* voice input not yet implemented */ }
     }
 }
 
 @Composable
 private fun ToolBtn(
-    label: String,
-    isBold: Boolean = false,
+    icon: ImageVector? = null,
+    label: String? = null,
     isHighlight: Boolean = false,
-    onClick: () -> Unit,
+    onClick: () -> Unit = {},
 ) {
     Box(
         modifier = Modifier
@@ -349,12 +372,21 @@ private fun ToolBtn(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text       = label,
-            color      = if (isHighlight) EnterBg else ToolTxt,
-            fontSize   = if (label.length > 2) 12.sp else 17.sp,
-            fontWeight = if (isBold || isHighlight) FontWeight.Bold else FontWeight.Normal,
-        )
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isHighlight) EnterBg else Color.White,
+                modifier = Modifier.size(ToolIconSize)
+            )
+        } else if (label != null) {
+            Text(
+                text       = label,
+                color      = if (isHighlight) EnterBg else Color.White,
+                fontSize   = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 
