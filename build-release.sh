@@ -21,17 +21,22 @@ fail() { echo -e "${RED}[error]${NC} $*" >&2; exit 1; }
 # ─── Parse args ───────────────────────────────────────────────────────────────
 BUILD_TYPE="apk"   # apk | aab
 INSTALL=true
+CLEAN=false
 
 for arg in "$@"; do
   case $arg in
     --aab)         BUILD_TYPE="aab" ;;
     --install)     INSTALL=true ;;
     --no-install)  INSTALL=false ;;
+    --clean)       CLEAN=true ;;
     --help)
-      echo "Usage: $0 [--aab] [--install] [--no-install]"
+      echo "Usage: $0 [--aab] [--install] [--no-install] [--clean]"
       echo "  --aab          Build AAB for Play Store instead of APK"
       echo "  --install      Install APK on connected USB device after build (default)"
       echo "  --no-install   Skip USB install even if device is connected"
+      echo "  --clean        Run './gradlew clean' first to force a full rebuild"
+      echo "                 (without this, Gradle's incremental build reuses"
+      echo "                 cached outputs, which can mask stale resources/code)"
       exit 0 ;;
     *) fail "Unknown argument: $arg" ;;
   esac
@@ -72,6 +77,11 @@ keytool -list -keystore "$KEYSTORE" -alias "$KEY_ALIAS" \
 
 # ─── Gradle build ─────────────────────────────────────────────────────────────
 cd "$SCRIPT_DIR"
+
+if [ "$CLEAN" = true ]; then
+  log "Cleaning previous build outputs..."
+  ./gradlew clean
+fi
 
 if [ "$BUILD_TYPE" = "aab" ]; then
   log "Building release AAB (Play Store)..."
@@ -133,3 +143,4 @@ fi
 #   ./build-release.sh                          # build APK + auto-install if USB connected
 #   ./build-release.sh --aab                    # build AAB for Play Store
 #   ./build-release.sh --no-install             # build only, skip install
+#   ./build-release.sh --clean                  # force a full rebuild (gradlew clean first)
