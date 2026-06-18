@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.EmojiEmotions
+import androidx.compose.material.icons.filled.GTranslate
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.Icon
@@ -23,73 +25,73 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.loony.bodokeyboard.data.KeyboardMode
-import com.loony.bodokeyboard.ui.theme.ChipShape
+import com.loony.bodokeyboard.ui.theme.AccentMint
 import com.loony.bodokeyboard.ui.theme.DividerC
-import com.loony.bodokeyboard.ui.theme.EnterBg
 import com.loony.bodokeyboard.ui.theme.KbBg
+import com.loony.bodokeyboard.ui.theme.KeyTxt
+import com.loony.bodokeyboard.ui.theme.KeyTxtDark
 
-private val ToolIconSize = 22.dp
+private val ToolIconSize = 20.dp
 
-/**
- * The thin toolbar row sitting between the suggestion bar and the key rows.
- * Contains: collapse button, language toggle, emoji, GIF, paste, settings, microphone.
- */
 @Composable
 internal fun ToolbarRow(mode: KeyboardMode, onKeyClick: (String) -> Unit) {
-    val modeLabel = if (mode == KeyboardMode.BODO) "EN" else "बर'"
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .height(48.dp)
             .background(KbBg)
-            .padding(horizontal = 4.dp),
+            .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceEvenly
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // Collapse / back chevron with a subtle accent ring
+        // Leftmost circular button (accented)
         Box(
             modifier = Modifier
-                .size(34.dp)
-                .clip(ChipShape)
-                .background(EnterBg.copy(alpha = 0.25f))
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(AccentMint)
                 .clickable { onKeyClick("COLLAPSE") },
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Collapse",
-                tint               = EnterBg,
-                modifier           = Modifier.size(ToolIconSize)
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = null,
+                tint = KeyTxtDark,
+                modifier = Modifier.size(18.dp)
             )
         }
 
-        // Language toggle (EN ↔ बर')
-        ToolBtn(label = modeLabel) { onKeyClick("MODE_SWITCH") }
-        ToolBtn(icon = Icons.Default.EmojiEmotions)  { onKeyClick("EMOJI_SWITCH") }
-        ToolBtn(label = "GIF")                       { onKeyClick("GIF_SWITCH") }
-        ToolBtn(icon = Icons.Default.ContentPaste)   { onKeyClick("PASTE") }
+        // Toolbar Icons
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ToolBtn(icon = Icons.Default.GTranslate) { /* translate */ }
+            ToolBtn(icon = Icons.Default.EmojiEmotions) { onKeyClick("EMOJI_SWITCH") }
+            ToolBtn(label = "GIF") { onKeyClick("GIF_SWITCH") }
+            ToolBtn(icon = Icons.AutoMirrored.Filled.Assignment) { onKeyClick("PASTE") }
+        }
 
-        // Vertical divider
-        Box(
-            Modifier
-                .width(1.dp)
-                .height(24.dp)
-                .background(DividerC)
-        )
-
-        ToolBtn(icon = Icons.Default.MoreHoriz) { onKeyClick("SETTINGS_OPEN") }
-        ToolBtn(icon = Icons.Default.Mic)       { /* voice input not yet implemented */ }
+        // Divider and more
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .width(1.dp)
+                    .height(20.dp)
+                    .background(DividerC)
+            )
+            ToolBtn(icon = Icons.Default.MoreHoriz) { onKeyClick("SETTINGS_OPEN") }
+            ToolBtn(icon = Icons.Default.Mic) { /* voice */ }
+        }
     }
 }
 
-/** A single square button in the toolbar — renders either an icon or a text label. */
 @Composable
 internal fun ToolBtn(
     icon: ImageVector? = null,
@@ -99,26 +101,26 @@ internal fun ToolBtn(
 ) {
     Box(
         modifier = Modifier
-            .size(42.dp)
+            .size(40.dp)
             .clip(RoundedCornerShape(8.dp))
             .then(
-                if (isHighlight) Modifier.background(EnterBg.copy(alpha = 0.25f)) else Modifier
+                if (isHighlight) Modifier.background(AccentMint.copy(alpha = 0.25f)) else Modifier
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         if (icon != null) {
             Icon(
-                imageVector        = icon,
+                imageVector = icon,
                 contentDescription = null,
-                tint               = if (isHighlight) EnterBg else Color.White,
-                modifier           = Modifier.size(ToolIconSize)
+                tint = if (isHighlight) AccentMint else KeyTxt,
+                modifier = Modifier.size(ToolIconSize)
             )
         } else if (label != null) {
             Text(
-                text       = label,
-                color      = if (isHighlight) EnterBg else Color.White,
-                fontSize   = 16.sp,
+                text = label,
+                color = if (isHighlight) AccentMint else KeyTxt,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
             )
         }

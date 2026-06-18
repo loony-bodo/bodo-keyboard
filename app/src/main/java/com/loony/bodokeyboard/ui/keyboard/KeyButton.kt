@@ -4,9 +4,6 @@ package com.loony.bodokeyboard.ui.keyboard
 
 import android.view.HapticFeedbackConstants
 import android.view.inputmethod.EditorInfo
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -37,7 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
@@ -45,8 +42,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.loony.bodokeyboard.data.KeyboardMode
+import com.loony.bodokeyboard.ui.theme.AccentMint
 import com.loony.bodokeyboard.ui.theme.CapsActive
-import com.loony.bodokeyboard.ui.theme.EnterBg
 import com.loony.bodokeyboard.ui.theme.HintTxt
 import com.loony.bodokeyboard.ui.theme.KeyNorm
 import com.loony.bodokeyboard.ui.theme.KeyPressed
@@ -54,23 +51,13 @@ import com.loony.bodokeyboard.ui.theme.KeyShape
 import com.loony.bodokeyboard.ui.theme.KeySpec
 import com.loony.bodokeyboard.ui.theme.KeySpecP
 import com.loony.bodokeyboard.ui.theme.KeyTxt
+import com.loony.bodokeyboard.ui.theme.KeyTxtDark
+import com.loony.bodokeyboard.ui.theme.PillShape
+import com.loony.bodokeyboard.ui.theme.SagePill
 import com.loony.bodokeyboard.viewmodel.KeyboardViewModel
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 
-/**
- * A single keyboard key with press animation, haptic feedback, long-press support,
- * and continuous delete on BACKSPACE hold.
- *
- * @param key         The key identifier / character to emit.
- * @param hint        Optional number hint rendered in the top-right corner.
- * @param mode        The current keyboard mode (controls label and icon rendering).
- * @param isCapsLock  Whether CapsLock is active (used to tint the SHIFT key).
- * @param viewModel   Provides haptic preference and keyboard height; null is safe (GIF panel).
- * @param onSpaceDrag Called with +1 / -1 when the SPACE key is dragged horizontally.
- * @param onLongPress Called with the key string on long press; null = no long-press action.
- * @param onClick     Called on normal tap.
- */
 @Composable
 fun KeyButton(
     key: String,
@@ -88,44 +75,36 @@ fun KeyButton(
     val view = LocalView.current
     var dragAccumulator by remember { mutableFloatStateOf(0f) }
 
-    // Continuous delete while BACKSPACE is held
     if (isPressed && key == "BACKSPACE") {
         LaunchedEffect(Unit) {
-            delay(400)   // initial delay before repeat
+            delay(400)
             while (true) {
                 onClick()
-                delay(60) // repeat interval
+                delay(60)
             }
         }
     }
 
-    val scale by animateFloatAsState(
-        targetValue  = if (isPressed) 0.90f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness    = Spring.StiffnessHigh
-        ),
-        label = "keyScale"
-    )
-
     val isSpecial   = key in setOf("SHIFT", "BACKSPACE", "SYM", "ABC", "MODE_SWITCH", "SYM_PAGE")
-    val isEnter     = key == "ENTER"
+    val isPill      = key in setOf("SYM", "ABC", "ENTER")
     val isShiftCaps = key == "SHIFT" && isCapsLock
 
     val bgColor = when {
+        key == "ENTER"         -> if (isPressed) AccentMint.copy(alpha = 0.8f) else AccentMint
+        key in setOf("SYM", "ABC") -> if (isPressed) SagePill.copy(alpha = 0.8f) else SagePill
         isShiftCaps            -> CapsActive
-        isSpecial || isEnter   -> if (isPressed) KeySpecP else KeySpec
+        isSpecial              -> if (isPressed) KeySpecP else KeySpec
         else                   -> if (isPressed) KeyPressed else KeyNorm
     }
 
-    val height = 45.dp * (viewModel?.keyboardHeightMultiplier?.value ?: 1f)
+    val height = 48.dp * (viewModel?.keyboardHeightMultiplier?.value ?: 1f)
 
     val icon: ImageVector? = when (key) {
         "BACKSPACE" -> Icons.AutoMirrored.Filled.Backspace
         "ENTER"     -> resolveEnterIcon(viewModel)
         "SHIFT"     -> when {
             isCapsLock                -> Icons.Default.KeyboardDoubleArrowUp
-            mode == KeyboardMode.BODO -> null  // Bodo shift uses text label
+            mode == KeyboardMode.BODO -> null
             else                      -> Icons.Default.ArrowUpward
         }
         else -> null
@@ -147,20 +126,24 @@ fun KeyButton(
         else           -> key
     }
 
+    val contentColor = when {
+        key == "ENTER" || key in setOf("SYM", "ABC") -> KeyTxtDark
+        else -> KeyTxt
+    }
+
     val fontSize = when {
         key == "SHIFT" && mode == KeyboardMode.BODO         -> 13.sp
         key in setOf("SHIFT", "BACKSPACE", "ENTER")         -> 22.sp
-        key in setOf("MODE_SWITCH", "SYM", "ABC")           -> 14.sp
+        key in setOf("MODE_SWITCH", "SYM", "ABC")           -> 16.sp
         key == "SPACE"                                       -> 13.sp
         key.length > 2                                       -> 12.sp
-        else                                                 -> 18.sp
+        else                                                 -> 20.sp
     }
 
     Box(
         modifier = modifier
             .height(height)
-            .scale(scale)
-            .clip(KeyShape)
+            .clip(if (isPill) PillShape else KeyShape)
             .background(bgColor)
             .then(
                 if (key == "SPACE") Modifier.pointerInput(Unit) {
@@ -198,30 +181,26 @@ fun KeyButton(
             Icon(
                 imageVector        = icon,
                 contentDescription = null,
-                tint               = KeyTxt,
-                modifier           = Modifier.align(Alignment.Center).size(22.dp)
+                tint               = contentColor,
+                modifier           = Modifier.align(Alignment.Center).size(24.dp)
             )
         } else {
             Text(
                 text       = label,
                 modifier   = Modifier.align(Alignment.Center),
                 fontSize   = fontSize,
-                fontWeight = when (key) {
-                    "MODE_SWITCH", "SYM", "ABC" -> FontWeight.SemiBold
-                    else                         -> FontWeight.Normal
-                },
-                color = KeyTxt
+                fontWeight = if (isPill) FontWeight.Medium else FontWeight.Normal,
+                color      = contentColor
             )
         }
 
-        // Number hint — top-right corner of Q-row keys
         if (hint != null) {
             Text(
                 text       = hint,
                 modifier   = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 3.dp, end = 4.dp),
-                fontSize   = 9.sp,
+                    .padding(top = 4.dp, end = 6.dp),
+                fontSize   = 10.sp,
                 color      = HintTxt,
                 fontWeight = FontWeight.Normal,
             )
@@ -229,7 +208,6 @@ fun KeyButton(
     }
 }
 
-/** Resolves the correct icon for the ENTER key based on the current IME action. */
 private fun resolveEnterIcon(viewModel: KeyboardViewModel?): ImageVector {
     val inputType   = viewModel?.editorInfo?.inputType ?: 0
     val isMultiLine = (inputType and EditorInfo.TYPE_TEXT_FLAG_MULTI_LINE) != 0
