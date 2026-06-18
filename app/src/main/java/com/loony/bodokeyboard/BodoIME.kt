@@ -17,6 +17,8 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.loony.bodokeyboard.data.KeyboardMode
+import com.loony.bodokeyboard.viewmodel.KeyboardViewModel
 
 class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 

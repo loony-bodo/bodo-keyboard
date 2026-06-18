@@ -1,4 +1,4 @@
-package com.loony.bodokeyboard
+package com.loony.bodokeyboard.transliteration
 
 /**
  * Bodo Devanagari Unicode constants — PramukhIME-compatible.

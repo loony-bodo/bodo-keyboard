@@ -1,4 +1,4 @@
-package com.loony.bodokeyboard
+package com.loony.bodokeyboard.transliteration
 
 import java.text.Normalizer
 
