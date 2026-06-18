@@ -41,7 +41,7 @@ class KeyboardViewModel : ViewModel() {
     private val _isSymbols2 = mutableStateOf(false)
     val isSymbols2: State<Boolean> = _isSymbols2
 
-    private val _keyboardMode = mutableStateOf(KeyboardMode.BODO)
+    private val _keyboardMode = mutableStateOf(KeyboardMode.ENGLISH)
     val keyboardMode: State<KeyboardMode> = _keyboardMode
 
     // ── Emoji panel ───────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -688,6 +689,54 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
             .background(KbBg)
             .height(if (isSearching) 340.dp else 280.dp)
     ) {
+        if (isSearching) {
+            // Search screen header — back arrow returns to the emoji panel.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(ChipShape)
+                        .clickable { closeSearch() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = SuggTxt, modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.width(4.dp))
+                Text("Search emoji", color = SuggTxt, fontSize = 16.sp)
+            }
+
+            // Matched emoji shown as a single horizontal scrollable row, on top.
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items(displayedEmojis) { emoji ->
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(KeySpec)
+                            .clickable { handleEmojiClick(emoji) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(emoji, fontSize = 22.sp)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.fillMaxWidth().height(1.dp).background(DividerC))
+        }
+
         // Search bar
         Box(
             modifier = Modifier
@@ -717,7 +766,7 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                             .size(22.dp)
                             .clip(ChipShape)
                             .background(DividerC)
-                            .clickable { closeSearch() },
+                            .clickable { searchQuery = "" },
                         contentAlignment = Alignment.Center
                     ) {
                         Text("✕", color = SuggTxt, fontSize = 11.sp)
@@ -762,35 +811,45 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
             }
         }
 
-        // Emoji grid
-        if (displayedEmojis.isEmpty()) {
+        // Emoji grid (search results use the horizontal row above instead).
+        if (!isSearching) {
+            if (displayedEmojis.isEmpty()) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "No recently used emoji",
+                        color = ToolTxt,
+                        fontSize = 13.sp
+                    )
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(7),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(4.dp)
+                ) {
+                    items(displayedEmojis) { emoji ->
+                        Box(
+                            modifier = Modifier
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { handleEmojiClick(emoji) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(emoji, fontSize = 28.sp)
+                        }
+                    }
+                }
+            }
+        } else if (displayedEmojis.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = if (searchResults != null) "No matching emoji"
-                           else if (isSearching) "Type to search emoji"
-                           else "No recently used emoji",
+                    text = if (searchResults != null) "No matching emoji" else "Type to search emoji",
                     color = ToolTxt,
                     fontSize = 13.sp
                 )
             }
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(7),
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(4.dp)
-            ) {
-                items(displayedEmojis) { emoji ->
-                    Box(
-                        modifier = Modifier
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(6.dp))
-                            .clickable { handleEmojiClick(emoji) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(emoji, fontSize = 28.sp)
-                    }
-                }
-            }
+            Spacer(modifier = Modifier.weight(1f))
         }
 
         if (isSearching) {
