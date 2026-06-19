@@ -1,68 +1,222 @@
 package com.loony.bodokeyboard.ui.emoji
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import coil.request.ImageRequest
 import com.loony.bodokeyboard.data.KeyboardMode
 import com.loony.bodokeyboard.ui.keyboard.KeyButton
 import com.loony.bodokeyboard.ui.theme.KbBg
 import com.loony.bodokeyboard.ui.theme.KeyNorm
+import com.loony.bodokeyboard.ui.theme.KeySpec
 import com.loony.bodokeyboard.ui.theme.ToolTxt
+import com.loony.bodokeyboard.viewmodel.KeyboardViewModel
 
-/**
- * Placeholder GIF keyboard panel.
- * Currently shows sample emojis; replace with a real GIF API integration.
- */
 @Composable
-fun GifKeyboard(onKeyClick: (String) -> Unit) {
-    val sampleGifs = listOf("🔥", "🎉", "❤️", "😂", "👍", "🙏", "✨", "🙌")
+fun GifKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearching by remember { mutableStateOf(false) }
+    
+    val gifs by viewModel.gifs
+    val isLoading by viewModel.isGifLoading
+    val context = LocalContext.current
+
+    val imageLoader = remember {
+        ImageLoader.Builder(context)
+            .components {
+                if (Build.VERSION.SDK_INT >= 28) {
+                    add(ImageDecoderDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
+    }
+
+    LaunchedEffect(searchQuery) {
+        viewModel.searchGifs(searchQuery)
+    }
 
     Column(
         modifier = Modifier
             .background(KbBg)
-            .height(240.dp)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .height(if (isSearching) 360.dp else 300.dp)
     ) {
-        Text("GIF Search (Placeholder)", color = ToolTxt, fontSize = 16.sp)
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            sampleGifs.forEach { gif ->
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(KeyNorm, RoundedCornerShape(8.dp))
-                        .clickable { onKeyClick(gif) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(gif, fontSize = 20.sp)
+        // Custom Search Bar UI (Doesn't trigger system keyboard)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+                .height(48.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(KeySpec)
+                .clickable { isSearching = true }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (isSearching) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = ToolTxt,
+                        modifier = Modifier.clickable { isSearching = false }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                } else {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = ToolTxt)
+                    Spacer(Modifier.width(12.dp))
+                }
+                
+                Box(modifier = Modifier.weight(1f)) {
+                    if (searchQuery.isEmpty()) {
+                        Text("Search GIFs", color = ToolTxt, fontSize = 16.sp)
+                    } else {
+                        Text(searchQuery, color = Color.White, fontSize = 16.sp)
+                    }
+                }
+                
+                if (searchQuery.isNotEmpty()) {
+                    Text(
+                        "✕",
+                        color = ToolTxt,
+                        modifier = Modifier.clickable { searchQuery = "" }.padding(8.dp)
+                    )
                 }
             }
         }
-        Spacer(Modifier.height(20.dp))
-        KeyButton(
-            key        = "ABC",
-            modifier   = Modifier.fillMaxWidth(0.3f),
-            mode       = KeyboardMode.GIF,
-            isCapsLock = false,
-            viewModel  = null,
-            onClick    = { onKeyClick("ABC") }
-        )
+
+        // GIF Grid
+        Box(modifier = Modifier.weight(1f)) {
+            if (isLoading && gifs.isEmpty()) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = ToolTxt
+                )
+            } else if (gifs.isEmpty()) {
+                Text(
+                    if (searchQuery.isEmpty()) "Loading trending..." else "No GIFs found",
+                    modifier = Modifier.align(Alignment.Center),
+                    color = ToolTxt
+                )
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(gifs) { gif ->
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(gif.previewUrl)
+                                .crossfade(true)
+                                .build(),
+                            imageLoader = imageLoader,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(KeyNorm)
+                                .clickable { onKeyClick(gif.url) },
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+        }
+
+        // Mini Keyboard for Search
+        if (isSearching) {
+            val searchRows = listOf(
+                listOf("q", "w", "e", "r", "t", "y", "u", "i", "o", "p"),
+                listOf("a", "s", "d", "f", "g", "h", "j", "k", "l"),
+                listOf("z", "x", "c", "v", "b", "n", "m", "BACKSPACE")
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(2.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                searchRows.forEachIndexed { rowIdx, row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (rowIdx == 1) Spacer(Modifier.weight(0.5f))
+                        row.forEach { key ->
+                            KeyButton(
+                                key = key,
+                                modifier = Modifier.weight(if (key == "BACKSPACE") 1.8f else 1f),
+                                mode = KeyboardMode.ENGLISH,
+                                isCapsLock = false,
+                                viewModel = viewModel,
+                                onClick = {
+                                    if (key == "BACKSPACE") {
+                                        if (searchQuery.isNotEmpty()) searchQuery = searchQuery.dropLast(1)
+                                    } else {
+                                        searchQuery += key
+                                    }
+                                }
+                            )
+                        }
+                        if (rowIdx == 1) Spacer(Modifier.weight(0.5f))
+                    }
+                }
+            }
+        } else {
+            // Panel Controls
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                KeyButton(
+                    key = "ABC",
+                    modifier = Modifier.width(80.dp),
+                    mode = KeyboardMode.GIF,
+                    isCapsLock = false,
+                    viewModel = viewModel,
+                    onClick = { onKeyClick("ABC") }
+                )
+                
+                KeyButton(
+                    key = "BACKSPACE",
+                    modifier = Modifier.width(80.dp),
+                    mode = KeyboardMode.GIF,
+                    isCapsLock = false,
+                    viewModel = viewModel,
+                    onClick = { onKeyClick("BACKSPACE") }
+                )
+            }
+        }
     }
 }

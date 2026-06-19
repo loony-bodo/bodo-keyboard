@@ -7,9 +7,20 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.loony.bodokeyboard.data.KeyboardMode
+import com.loony.bodokeyboard.data.GifResult
+import com.loony.bodokeyboard.data.GiphyResponse
 import com.loony.bodokeyboard.transliteration.BodoTranslitMappings
 import com.loony.bodokeyboard.transliteration.TransliterationDatabase
 import com.loony.bodokeyboard.transliteration.TransliterationEngine
+import com.loony.bodokeyboard.BuildConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import java.net.HttpURLConnection
+import java.net.URL
+import androidx.lifecycle.viewModelScope
 
 /**
  * Holds all keyboard state and drives UI recomposition via Compose State.
@@ -64,6 +75,55 @@ class KeyboardViewModel : ViewModel() {
         recentEmojis.remove(emoji)
         recentEmojis.add(0, emoji)
         while (recentEmojis.size > 30) recentEmojis.removeAt(recentEmojis.size - 1)
+    }
+
+    // ── GIF panel ─────────────────────────────────────────────────────────────
+
+    private val _gifs = mutableStateOf<List<GifResult>>(emptyList())
+    val gifs: State<List<GifResult>> = _gifs
+
+    private val _isGifLoading = mutableStateOf(false)
+    val isGifLoading: State<Boolean> = _isGifLoading
+
+    private var gifSearchJob: Job? = null
+
+    fun searchGifs(query: String) {
+        gifSearchJob?.cancel()
+        
+        gifSearchJob = viewModelScope.launch(Dispatchers.IO) {
+            if (query.isNotEmpty()) {
+                delay(500) // Debounce for search
+            }
+            _isGifLoading.value = true
+            try {
+                val apiKey = BuildConfig.GIPHY_API_KEY
+                val urlString = if (query.isEmpty()) {
+                    "https://api.giphy.com/v1/gifs/trending?api_key=$apiKey&limit=20&rating=g"
+                } else {
+                    "https://api.giphy.com/v1/gifs/search?api_key=$apiKey&q=$query&limit=20&rating=g"
+                }
+                val url = URL(urlString)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connect()
+
+                if (connection.responseCode == 200) {
+                    val jsonString = connection.inputStream.bufferedReader().use { it.readText() }
+                    val response = Json { ignoreUnknownKeys = true }.decodeFromString<GiphyResponse>(jsonString)
+                    _gifs.value = response.data.map {
+                        GifResult(
+                            id = it.id,
+                            url = it.images.fixed_height.url,
+                            previewUrl = it.images.preview_gif.url
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _isGifLoading.value = false
+            }
+        }
     }
 
     // ── Transliteration ───────────────────────────────────────────────────────

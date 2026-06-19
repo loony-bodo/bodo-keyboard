@@ -136,7 +136,7 @@ fun KeyboardScreen(
     ) {
         when (state.mode) {
             KeyboardMode.EMOJI -> EmojiKeyboard(viewModel, onKeyClick)
-            KeyboardMode.GIF   -> GifKeyboard(onKeyClick)
+            KeyboardMode.GIF   -> GifKeyboard(viewModel, onKeyClick)
             else -> KeyboardContent(state, viewModel, onKeyClick, onSuggestionClick, onSpaceDrag)
         }
     }

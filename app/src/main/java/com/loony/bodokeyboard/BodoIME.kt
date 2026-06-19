@@ -169,6 +169,12 @@ class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, Saved
                 .playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD)
         }
 
+        // GIF handling
+        if (key.startsWith("http")) {
+            ic.commitText(key, 1)
+            return
+        }
+
         // Route all printable characters through transliteration when in TRANSLIT mode
         if (viewModel.isTranslitMode() && key.length == 1 && key[0].isLetter()) {
             handleTranslitChar(key[0])
