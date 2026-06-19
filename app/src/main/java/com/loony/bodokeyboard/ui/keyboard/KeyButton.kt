@@ -6,6 +6,7 @@ import android.view.HapticFeedbackConstants
 import android.view.inputmethod.EditorInfo
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -34,13 +36,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
 import com.loony.bodokeyboard.data.KeyboardMode
 import com.loony.bodokeyboard.ui.theme.AccentMint
 import com.loony.bodokeyboard.ui.theme.CapsActive
@@ -86,6 +91,7 @@ fun KeyButton(
     }
 
     val isSpecial   = key in setOf("SHIFT", "BACKSPACE", "SYM", "ABC", "MODE_SWITCH", "SYM_PAGE")
+    val isEnter     = key == "ENTER"
     val isPill      = key in setOf("SYM", "ABC", "ENTER")
     val isShiftCaps = key == "SHIFT" && isCapsLock
 
@@ -177,6 +183,28 @@ fun KeyButton(
                 }
             )
     ) {
+        if (isPressed && !isSpecial && !isEnter && key != "SPACE") {
+            Popup(
+                alignment = Alignment.TopCenter,
+                offset = IntOffset(0, -110) // Adjust based on key height
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(height * 1.3f, height * 1.8f)
+                        .shadow(8.dp, RoundedCornerShape(12.dp))
+                        .background(KeyNorm, RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        color = Color.White,
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
         if (icon != null) {
             Icon(
                 imageVector        = icon,

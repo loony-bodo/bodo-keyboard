@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,15 +29,8 @@ import com.loony.bodokeyboard.ui.theme.SuggTxt
 
 /**
  * The strip above the keyboard rows. Shows either:
- *  - Word suggestions (up to 3, separated by dividers)
+ *  - Word suggestions (3 equal slots, no borders)
  *  - A long-press alternate picker for the given key
- *
- * @param suggestions     The current suggestion list (may be empty).
- * @param longPressKey    The key that was long-pressed, or null if no active long-press.
- * @param longPressAlts   Pre-computed alternate characters for [longPressKey].
- * @param onSuggestion    Called when the user taps a word suggestion.
- * @param onAlternate     Called when the user taps an alternate character chip.
- * @param onDismissAlts   Called when the user taps the ✕ dismiss button.
  */
 @Composable
 internal fun SuggestionBar(
@@ -52,11 +44,10 @@ internal fun SuggestionBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(42.dp)
+            .height(44.dp)
             .background(SuggBg)
     ) {
         if (longPressKey != null) {
-            // ── Alternate character picker ────────────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -80,19 +71,10 @@ internal fun SuggestionBar(
                 }
             }
         } else {
-            // ── Word suggestion row ────────────────────────────────────────────
+            // Reverted to 3 equal slots as requested, but with bigger text
             val padded = (suggestions + List(3) { "" }).take(3)
             Row(modifier = Modifier.fillMaxSize()) {
-                padded.forEachIndexed { i, word ->
-                    if (i > 0) {
-                        Box(
-                            Modifier
-                                .fillMaxHeight()
-                                .width(1.dp)
-                                .padding(vertical = 10.dp)
-                                .background(DividerC)
-                        )
-                    }
+                padded.forEach { word ->
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -107,7 +89,7 @@ internal fun SuggestionBar(
                             Text(
                                 text       = word,
                                 color      = SuggTxt,
-                                fontSize   = 15.sp,
+                                fontSize   = 18.sp, // Bigger text for Bodo readability
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -115,15 +97,6 @@ internal fun SuggestionBar(
                 }
             }
         }
-
-        // Bottom divider line
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .align(Alignment.BottomCenter)
-                .background(DividerC)
-        )
     }
 }
 
