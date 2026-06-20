@@ -230,19 +230,21 @@ class KeyboardViewModel : ViewModel() {
     // ── Symbols / Mode ────────────────────────────────────────────────────────
 
     fun toggleSymbols() {
-        if (_isSymbols.value && !_isSymbols2.value) {
-            _isSymbols2.value = true
-        } else if (_isSymbols.value && _isSymbols2.value) {
-            _isSymbols.value  = false
-            _isSymbols2.value = false
+        if (_isSymbols.value) {
+            resetSymbols()
         } else {
-            _isSymbols.value  = true
+            _isSymbols.value = true
             _isSymbols2.value = false
         }
     }
 
     fun toggleSymbolsPage() {
         _isSymbols2.value = !_isSymbols2.value
+    }
+
+    fun resetSymbols() {
+        _isSymbols.value = false
+        _isSymbols2.value = false
     }
 
     fun setMode(mode: KeyboardMode) {

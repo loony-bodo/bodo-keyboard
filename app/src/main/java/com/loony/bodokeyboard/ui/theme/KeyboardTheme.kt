@@ -14,7 +14,7 @@ internal val KeySpecP   = Color(0xFF2D2E30)
 
 // Accents from the image
 internal val AccentMint = Color(0xFF84E3B2)   // The bright mint green
-internal val SagePill   = Color(0xFF35443F)   // Muted sage for ?123 button
+internal val SagePill   = Color(0xFFBDD2C1)   // Brighter sage for ?123 and ABC buttons
 
 internal val EnterBg    = AccentMint          // Enter button background
 internal val CapsActive = AccentMint          // CapsLock indicator

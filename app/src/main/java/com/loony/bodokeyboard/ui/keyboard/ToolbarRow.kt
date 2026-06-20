@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.GTranslate
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreHoriz
@@ -82,9 +83,8 @@ internal fun ToolbarRow(
             ) { onKeyClick("SUGGESTION_TOGGLE") }
 
             ToolBtn(icon = Icons.Default.GTranslate) { /* translate */ }
-
-            val modeLabel = if (mode == KeyboardMode.BODO) "EN" else "बर'"
-            ToolBtn(label = modeLabel) { onKeyClick("MODE_SWITCH") }
+            
+            ToolBtn(icon = Icons.Default.EmojiEmotions) { onKeyClick("EMOJI_SWITCH") }
 
             ToolBtn(label = "GIF") { onKeyClick("GIF_SWITCH") }
             ToolBtn(icon = Icons.AutoMirrored.Filled.Assignment) { onKeyClick("PASTE") }

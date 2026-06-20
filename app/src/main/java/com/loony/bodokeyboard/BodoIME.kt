@@ -266,7 +266,7 @@ class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, Saved
                 if (viewModel.keyboardMode.value == KeyboardMode.EMOJI || viewModel.keyboardMode.value == KeyboardMode.GIF) {
                     viewModel.setMode(KeyboardMode.BODO)
                 } else {
-                    viewModel.toggleSymbols()
+                    viewModel.resetSymbols()
                 }
             }
 

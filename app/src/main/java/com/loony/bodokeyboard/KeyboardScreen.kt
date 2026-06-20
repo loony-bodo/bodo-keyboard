@@ -45,9 +45,9 @@ private class EnglishLayout(
 ) : KeyboardLayout {
 
     private val bottomRow = if (isEmailField)
-        listOf("SYM", "EMOJI_SWITCH", ",", "SPACE", "@", "ENTER")
+        listOf("SYM", "MODE_SWITCH", ",", "SPACE", "@", "ENTER")
     else
-        listOf("SYM", "EMOJI_SWITCH", ",", "SPACE", ".", "ENTER")
+        listOf("SYM", "MODE_SWITCH", ",", "SPACE", ".", "ENTER")
 
     override fun rows() = if (!isShifted) listOf(
         KeyRowModel(keys = listOf("q","w","e","r","t","y","u","i","o","p")),
@@ -86,9 +86,9 @@ private class BodoLayout(
 ) : KeyboardLayout {
 
     private val bottomRow = if (isEmailField)
-        listOf("SYM", "EMOJI_SWITCH", "SPACE", "@", "ENTER")
+        listOf("SYM", "MODE_SWITCH", ",", "SPACE", "@", "ENTER")
     else
-        listOf("SYM", "EMOJI_SWITCH", "SPACE", "।", "ENTER")
+        listOf("SYM", "MODE_SWITCH", ",", "SPACE", "।", "ENTER")
 
     override fun rows() = if (isShifted) listOf(
         KeyRowModel(keys = listOf("अ","आ","इ","ई","उ","ऊ","ऋ","ए","ऐ","ओ","औ")),
