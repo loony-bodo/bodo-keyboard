@@ -110,21 +110,16 @@ internal fun ToolbarRow(
 
 @Composable
 private fun LangBtn(label: String, onClick: () -> Unit) {
-    Box(
+    Text(
+        text = label,
+        color = KeyTxt,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Bold,
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(AccentMint.copy(alpha = 0.15f))
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            color = KeyTxt,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-        )
-    }
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    )
 }
 
 @Composable
