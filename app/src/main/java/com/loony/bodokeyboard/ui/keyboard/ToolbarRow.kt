@@ -81,15 +81,11 @@ internal fun ToolbarRow(
                 isHighlight = isSuggestionsEnabled
             ) { onKeyClick("SUGGESTION_TOGGLE") }
 
-            // Language switcher: Bodo | EN
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val isBodo = mode == KeyboardMode.BODO
-                val isEn   = mode == KeyboardMode.ENGLISH || mode == KeyboardMode.TRANSLIT
-                LangBtn("बर'", isActive = isBodo)  { onKeyClick("SWITCH_BODO") }
-                LangBtn("EN",  isActive = isEn)    { onKeyClick("SWITCH_EN") }
+            // Language switcher: shows the language you'll switch TO
+            if (mode == KeyboardMode.BODO) {
+                LangBtn("EN")  { onKeyClick("SWITCH_EN") }
+            } else {
+                LangBtn("बर'") { onKeyClick("SWITCH_BODO") }
             }
 
             ToolBtn(icon = Icons.Default.EmojiEmotions) { onKeyClick("EMOJI_SWITCH") }
@@ -113,18 +109,18 @@ internal fun ToolbarRow(
 }
 
 @Composable
-private fun LangBtn(label: String, isActive: Boolean, onClick: () -> Unit) {
+private fun LangBtn(label: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(if (isActive) AccentMint else AccentMint.copy(alpha = 0.12f))
+            .background(AccentMint.copy(alpha = 0.15f))
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 10.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
-            color = if (isActive) KeyTxtDark else KeyTxt,
+            color = KeyTxt,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
         )
