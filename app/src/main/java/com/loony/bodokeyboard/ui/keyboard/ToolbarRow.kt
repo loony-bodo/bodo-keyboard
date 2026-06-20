@@ -17,7 +17,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.EmojiEmotions
-import androidx.compose.material.icons.filled.GTranslate
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.Icon
@@ -82,8 +81,17 @@ internal fun ToolbarRow(
                 isHighlight = isSuggestionsEnabled
             ) { onKeyClick("SUGGESTION_TOGGLE") }
 
-            ToolBtn(icon = Icons.Default.GTranslate) { /* translate */ }
-            
+            // Language switcher: Bodo | EN
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val isBodo = mode == KeyboardMode.BODO
+                val isEn   = mode == KeyboardMode.ENGLISH || mode == KeyboardMode.TRANSLIT
+                LangBtn("बर'", isActive = isBodo)  { onKeyClick("SWITCH_BODO") }
+                LangBtn("EN",  isActive = isEn)    { onKeyClick("SWITCH_EN") }
+            }
+
             ToolBtn(icon = Icons.Default.EmojiEmotions) { onKeyClick("EMOJI_SWITCH") }
 
             ToolBtn(label = "GIF") { onKeyClick("GIF_SWITCH") }
@@ -101,6 +109,25 @@ internal fun ToolbarRow(
             ToolBtn(icon = Icons.Default.MoreHoriz) { onKeyClick("SETTINGS_OPEN") }
             ToolBtn(icon = Icons.Default.Mic) { /* voice */ }
         }
+    }
+}
+
+@Composable
+private fun LangBtn(label: String, isActive: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (isActive) AccentMint else AccentMint.copy(alpha = 0.12f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = if (isActive) KeyTxtDark else KeyTxt,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 

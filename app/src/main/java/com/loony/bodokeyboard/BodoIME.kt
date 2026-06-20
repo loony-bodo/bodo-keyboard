@@ -278,6 +278,16 @@ class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, Saved
                 )
             }
 
+            "SWITCH_BODO" -> {
+                commitAndClearTranslit()
+                viewModel.setMode(KeyboardMode.BODO)
+            }
+
+            "SWITCH_EN" -> {
+                commitAndClearTranslit()
+                viewModel.setMode(KeyboardMode.ENGLISH)
+            }
+
             "TRANSLIT_TOGGLE" -> {
                 commitAndClearTranslit()
                 val next = if (viewModel.keyboardMode.value == KeyboardMode.TRANSLIT)

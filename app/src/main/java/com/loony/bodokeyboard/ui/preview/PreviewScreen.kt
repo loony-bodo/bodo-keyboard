@@ -153,6 +153,14 @@ private fun handlePreviewKey(
                 else KeyboardMode.BODO
             )
         }
+        "SWITCH_BODO" -> {
+            if (viewModel.isTranslitMode()) onTextChange(text + viewModel.flushTranslit())
+            viewModel.setMode(KeyboardMode.BODO)
+        }
+        "SWITCH_EN" -> {
+            if (viewModel.isTranslitMode()) onTextChange(text + viewModel.flushTranslit())
+            viewModel.setMode(KeyboardMode.ENGLISH)
+        }
         "TRANSLIT_TOGGLE" -> {
             if (viewModel.isTranslitMode()) onTextChange(text + viewModel.flushTranslit())
             viewModel.setMode(
