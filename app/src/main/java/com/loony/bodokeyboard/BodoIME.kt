@@ -176,7 +176,7 @@ class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
 
         // Route all printable characters through transliteration when in TRANSLIT mode
-        if (viewModel.isTranslitMode() && key.length == 1 && key[0].isLetter()) {
+        if (viewModel.isTranslitMode() && (key.length == 1 && key[0].isLetter() || key == "_")) {
             handleTranslitChar(key[0])
             checkAutoCap(ic)
             return
