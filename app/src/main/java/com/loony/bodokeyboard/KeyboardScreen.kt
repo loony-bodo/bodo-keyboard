@@ -158,16 +158,22 @@ private fun KeyboardContent(
             .fillMaxWidth()
             .padding(bottom = 4.dp)
     ) {
-        SuggestionBar(
-            suggestions = viewModel.suggestions.value,
-            longPressKey = null,
-            longPressAlts = emptyList(),
-            onSuggestion = onSuggestionClick,
-            onAlternate = onKeyClick,
-            onDismissAlts = {}
-        )
+        if (viewModel.suggestionsEnabled.value) {
+            SuggestionBar(
+                suggestions = viewModel.suggestions.value,
+                longPressKey = null,
+                longPressAlts = emptyList(),
+                onSuggestion = onSuggestionClick,
+                onAlternate = onKeyClick,
+                onDismissAlts = {}
+            )
+        }
 
-        ToolbarRow(mode = state.mode, onKeyClick = onKeyClick)
+        ToolbarRow(
+            mode = state.mode,
+            isSuggestionsEnabled = viewModel.suggestionsEnabled.value,
+            onKeyClick = onKeyClick
+        )
 
         Spacer(Modifier.height(4.dp))
 

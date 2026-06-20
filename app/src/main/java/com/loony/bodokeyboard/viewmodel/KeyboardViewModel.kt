@@ -171,6 +171,7 @@ class KeyboardViewModel : ViewModel() {
     val hapticEnabled            = mutableStateOf(true)
     val soundEnabled             = mutableStateOf(false)
     val keyboardHeightMultiplier = mutableStateOf(1.0f)
+    val suggestionsEnabled       = mutableStateOf(true)
 
     // ── Editor info ───────────────────────────────────────────────────────────
 
@@ -279,6 +280,10 @@ class KeyboardViewModel : ViewModel() {
     val suggestions: State<List<String>> = _suggestions
 
     fun updateSuggestions(text: String) {
+        if (!suggestionsEnabled.value) {
+            _suggestions.value = emptyList()
+            return
+        }
         val mode = _keyboardMode.value
         if (text.isEmpty()) {
             _suggestions.value = bodoWordList.take(3)

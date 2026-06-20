@@ -290,6 +290,17 @@ class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, Saved
                 viewModel.setMode(KeyboardMode.EMOJI)
             }
 
+            "SUGGESTION_TOGGLE" -> {
+                viewModel.suggestionsEnabled.value = !viewModel.suggestionsEnabled.value
+                // Refresh suggestions based on new state
+                val ic = currentInputConnection
+                if (ic != null) {
+                    val textBefore = ic.getTextBeforeCursor(20, 0)?.toString() ?: ""
+                    val word = textBefore.split(" ", "\n").lastOrNull() ?: ""
+                    viewModel.updateSuggestions(word)
+                }
+            }
+
             "GIF_SWITCH" -> {
                 commitAndClearTranslit()
                 viewModel.setMode(KeyboardMode.GIF)

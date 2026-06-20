@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.GTranslate
 import androidx.compose.material.icons.filled.Mic
@@ -39,7 +40,11 @@ import com.loony.bodokeyboard.ui.theme.KeyTxtDark
 private val ToolIconSize = 20.dp
 
 @Composable
-internal fun ToolbarRow(mode: KeyboardMode, onKeyClick: (String) -> Unit) {
+internal fun ToolbarRow(
+    mode: KeyboardMode,
+    isSuggestionsEnabled: Boolean,
+    onKeyClick: (String) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -72,6 +77,11 @@ internal fun ToolbarRow(mode: KeyboardMode, onKeyClick: (String) -> Unit) {
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            ToolBtn(
+                icon = Icons.Default.AutoAwesome,
+                isHighlight = isSuggestionsEnabled
+            ) { onKeyClick("SUGGESTION_TOGGLE") }
+
             ToolBtn(icon = Icons.Default.GTranslate) { /* translate */ }
             ToolBtn(icon = Icons.Default.EmojiEmotions) { onKeyClick("EMOJI_SWITCH") }
             ToolBtn(label = "GIF") { onKeyClick("GIF_SWITCH") }
