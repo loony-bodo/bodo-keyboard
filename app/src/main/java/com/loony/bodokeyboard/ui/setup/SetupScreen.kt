@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,8 +23,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardAlt
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,8 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -45,9 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.loony.bodokeyboard.ui.theme.AccentBrush
-import com.loony.bodokeyboard.ui.theme.AccentL
-import com.loony.bodokeyboard.ui.theme.AccentR
+import com.loony.bodokeyboard.ui.theme.Accent
 import com.loony.bodokeyboard.ui.theme.DivLine
 import com.loony.bodokeyboard.ui.theme.GreenDone
 import com.loony.bodokeyboard.ui.theme.Surface1
@@ -55,13 +53,6 @@ import com.loony.bodokeyboard.ui.theme.Surface2
 import com.loony.bodokeyboard.ui.theme.TextPri
 import com.loony.bodokeyboard.ui.theme.TextSec
 
-/**
- * Onboarding wizard that guides the user through two steps:
- *  1. Enable Bodo Keyboard in System Settings
- *  2. Select it as the active input method
- *
- * Status is polled every second via a LaunchedEffect loop.
- */
 @Composable
 fun SetupView() {
     val context     = LocalContext.current
@@ -87,32 +78,24 @@ fun SetupView() {
     ) {
         Spacer(Modifier.height(48.dp))
 
-        // ── Logo ──────────────────────────────────────────────────────────────
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(120.dp)) {
-            Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(Brush.radialGradient(listOf(AccentL.copy(alpha = 0.25f), Color.Transparent)))
-            )
-            Box(
-                modifier = Modifier
-                    .size(88.dp)
-                    .shadow(16.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(AccentBrush),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("बर'", fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-            }
+        // ── App icon ──────────────────────────────────────────────────────────
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Accent.copy(alpha = 0.15f))
+                .border(1.dp, Accent.copy(alpha = 0.3f), RoundedCornerShape(20.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("बर'", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Accent)
         }
 
         Spacer(Modifier.height(20.dp))
 
         Text(
             "Bodo Keyboard",
-            fontSize   = 28.sp,
-            fontWeight = FontWeight.ExtraBold,
+            fontSize   = 26.sp,
+            fontWeight = FontWeight.Bold,
             color      = TextPri,
             textAlign  = TextAlign.Center
         )
@@ -126,26 +109,26 @@ fun SetupView() {
 
         Spacer(Modifier.height(40.dp))
 
-        SetupProgressBar(step1Done = isEnabled, step2Done = isSelected)
-
-        Spacer(Modifier.height(28.dp))
-
+        // ── Step 1 ────────────────────────────────────────────────────────────
         SetupStepCard(
-            number      = 1,
-            title       = "Enable Keyboard",
+            step        = 1,
+            title       = "Enable Bodo Keyboard",
             description = "Add Bodo Keyboard to your list of input methods in System Settings.",
-            icon        = Icons.Default.Settings,
+            actionLabel = "Open Settings",
+            icon        = Icons.AutoMirrored.Filled.OpenInNew,
             isDone      = isEnabled,
             onClick     = { context.startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)) }
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
 
+        // ── Step 2 ────────────────────────────────────────────────────────────
         SetupStepCard(
-            number      = 2,
-            title       = "Select Keyboard",
-            description = "Switch to Bodo Keyboard as your active input method.",
-            icon        = Icons.Default.Info,
+            step        = 2,
+            title       = "Select as Default",
+            description = "Choose Bodo Keyboard as your active input method when prompted.",
+            actionLabel = "Select",
+            icon        = Icons.Default.TouchApp,
             isDone      = isSelected,
             onClick     = {
                 val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -155,162 +138,150 @@ fun SetupView() {
 
         if (isEnabled && isSelected) {
             Spacer(Modifier.height(24.dp))
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(GreenDone.copy(alpha = 0.12f))
-                    .border(1.dp, GreenDone.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
+                    .background(GreenDone.copy(alpha = 0.10f))
+                    .border(1.dp, GreenDone.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Icon(Icons.Default.Check, null, tint = GreenDone, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(10.dp))
                 Text(
-                    "✓  You're all set! Bodo Keyboard is active.",
+                    "You're all set! Bodo Keyboard is active.",
                     color      = GreenDone,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize   = 14.sp,
-                    textAlign  = TextAlign.Center
+                    fontWeight = FontWeight.Medium,
+                    fontSize   = 14.sp
                 )
             }
         }
 
         Spacer(Modifier.height(32.dp))
-    }
-}
 
-@Composable
-private fun SetupProgressBar(step1Done: Boolean, step2Done: Boolean) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        ProgressDot(done = step1Done, label = "Enable")
-        ProgressLine(
-            done     = step1Done && step2Done,
-            modifier = Modifier.weight(1f)
-        )
-        ProgressDot(done = step2Done, label = "Select")
-    }
-}
+        // ── Usage tips ────────────────────────────────────────────────────────
+        TipsCard()
 
-@Composable
-private fun ProgressDot(done: Boolean, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(
-                    if (done) AccentBrush
-                    else Brush.linearGradient(listOf(Surface2, Surface2))
-                )
-                .border(1.dp, if (done) Color.Transparent else DivLine, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                if (done) "✓" else "·",
-                color      = Color.White,
-                fontSize   = 13.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(label, fontSize = 11.sp, color = if (done) AccentL else TextSec)
+        Spacer(Modifier.height(40.dp))
     }
-}
-
-@Composable
-private fun ProgressLine(done: Boolean, modifier: Modifier) {
-    Box(
-        modifier = modifier
-            .padding(horizontal = 6.dp)
-            .height(2.dp)
-            .clip(RoundedCornerShape(1.dp))
-            .background(
-                if (done) AccentBrush
-                else Brush.linearGradient(listOf(Surface2, Surface2))
-            )
-    )
 }
 
 @Composable
 private fun SetupStepCard(
-    number: Int,
+    step: Int,
     title: String,
     description: String,
+    actionLabel: String,
     icon: ImageVector,
     isDone: Boolean,
     onClick: () -> Unit
 ) {
-    val border = if (isDone)
-        Brush.linearGradient(listOf(AccentL.copy(alpha = 0.5f), AccentR.copy(alpha = 0.5f)))
-    else
-        Brush.linearGradient(listOf(DivLine, DivLine))
-
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(if (isDone) 8.dp else 2.dp, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
-            .background(if (isDone) Surface2 else Surface1)
-            .border(1.dp, border, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(Surface1)
+            .border(
+                1.dp,
+                if (isDone) GreenDone.copy(alpha = 0.3f) else DivLine,
+                RoundedCornerShape(14.dp)
+            )
+            .padding(16.dp),
+        verticalAlignment = Alignment.Top
     ) {
-        Row(
+        // Step number / done circle
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(if (isDone) GreenDone.copy(alpha = 0.15f) else Surface2)
+                .border(1.dp, if (isDone) GreenDone.copy(alpha = 0.4f) else DivLine, CircleShape),
+            contentAlignment = Alignment.Center
         ) {
-            // Step number or checkmark circle
+            if (isDone) {
+                Icon(Icons.Default.Check, null, tint = GreenDone, modifier = Modifier.size(16.dp))
+            } else {
+                Text("$step", color = TextSec, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Spacer(Modifier.width(14.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isDone) TextSec else TextPri,
+                fontSize = 15.sp
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(description, fontSize = 13.sp, color = TextSec, lineHeight = 18.sp)
+            Spacer(Modifier.height(12.dp))
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isDone) AccentBrush
-                        else Brush.linearGradient(listOf(Surface2, Surface2))
-                    )
-                    .border(1.dp, if (isDone) Color.Transparent else DivLine, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isDone) {
-                    Text("✓", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                } else {
-                    Text("$number", color = TextSec, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-
-            Spacer(Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title,       fontWeight = FontWeight.Bold, color = TextPri, fontSize = 15.sp)
-                Spacer(Modifier.height(2.dp))
-                Text(description, fontSize = 13.sp, color = TextSec, lineHeight = 18.sp)
-            }
-
-            Spacer(Modifier.width(8.dp))
-
-            // Action button
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(AccentBrush)
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isDone) Surface2 else Accent)
                     .clickable(
                         onClick           = onClick,
                         indication        = null,
                         interactionSource = remember { MutableInteractionSource() }
-                    ),
+                    )
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Text(
-                    if (isDone) "Done" else "Open",
-                    color      = Color.White,
-                    fontSize   = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (isDone) Icons.Default.Check else icon,
+                        contentDescription = null,
+                        tint = if (isDone) TextSec else Color(0xFF1A1A1A),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        if (isDone) "Done" else actionLabel,
+                        color      = if (isDone) TextSec else Color(0xFF1A1A1A),
+                        fontSize   = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun TipsCard() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Surface1)
+            .border(1.dp, DivLine, RoundedCornerShape(14.dp))
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Default.KeyboardAlt,
+                contentDescription = null,
+                tint = Accent,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text("Tips", color = TextPri, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        }
+        Spacer(Modifier.height(12.dp))
+        TipRow("Switch between Bodo and English using the language button in the toolbar.")
+        TipRow("Long-press keys to see alternate characters.")
+        TipRow("Swipe left on the space bar to move the cursor.")
+        TipRow("Tap the star icon in the toolbar to toggle word suggestions.")
+    }
+}
+
+@Composable
+private fun TipRow(text: String) {
+    Row(modifier = Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
+        Text("•", color = Accent, fontSize = 13.sp, modifier = Modifier.padding(top = 1.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text, color = TextSec, fontSize = 13.sp, lineHeight = 18.sp)
     }
 }
