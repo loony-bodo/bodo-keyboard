@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.net.HttpURLConnection
 import java.net.URL
@@ -281,57 +282,72 @@ class KeyboardViewModel : ViewModel() {
     private val _suggestions   = mutableStateOf(listOf<String>())
     val suggestions: State<List<String>> = _suggestions
 
+    private var suggestionsJob: Job? = null
+
     fun updateSuggestions(text: String) {
-        if (!suggestionsEnabled.value) {
-            _suggestions.value = emptyList()
-            return
-        }
-        val mode = _keyboardMode.value
-        if (text.isEmpty()) {
-            _suggestions.value = bodoWordList.take(3)
-            return
-        }
+        suggestionsJob?.cancel()
+        suggestionsJob = viewModelScope.launch {
+            // Debounce: skip intermediate keystrokes when typing fast.
+            if (text.isNotEmpty()) delay(50)
 
-        val suggestionsList = mutableListOf<String>()
-        val isLatinInput = (mode == KeyboardMode.ENGLISH || mode == KeyboardMode.TRANSLIT) &&
-                           !text.any { it in 'ऀ'..'ॿ' }
-
-        if (isLatinInput) {
-            // 1. The Latin word exactly as typed
-            suggestionsList.add(text)
-
-            // 2. High-priority: Rules learned from SQLite (user's personal style)
-            val learned = db?.getLearnedRules(text.lowercase()) ?: emptyList()
-            learned.forEach { suggestionsList.add(it.second) }
-
-            // 3. The transliterated version of the Latin prefix (static engine)
-            val translitPrefix = translitEngine.flush(text.lowercase())
-            if (translitPrefix != text) {
-                suggestionsList.add(translitPrefix)
-
-                // Add linguistic alternates (e.g. Anusvara vs full Nasal)
-                BodoTranslitMappings.LINGUISTIC_ALTERNATES.forEach { (primary, alt) ->
-                    if (translitPrefix.endsWith(primary)) {
-                        suggestionsList.add(
-                            translitPrefix.substring(0, translitPrefix.length - primary.length) + alt
-                        )
-                    }
-                }
+            if (!suggestionsEnabled.value) {
+                _suggestions.value = emptyList()
+                return@launch
             }
 
-            // 4. Dictionary completions based on the transliteration
-            val completions = bodoWordList.filter {
-                it.startsWith(translitPrefix) && it != translitPrefix
-            }.take(3)
-            suggestionsList.addAll(completions)
-        } else {
-            // Devanagari input (BODO mode or already-committed TRANSLIT)
-            val filtered = bodoWordList.filter { it.startsWith(text) }.take(3)
-            suggestionsList.addAll(filtered)
-            if (suggestionsList.isEmpty()) suggestionsList.addAll(bodoWordList.take(3))
-        }
+            val mode = _keyboardMode.value
+            if (text.isEmpty()) {
+                _suggestions.value = bodoWordList.take(3)
+                return@launch
+            }
 
-        _suggestions.value = suggestionsList.distinct().take(3)
+            val result = withContext(Dispatchers.Default) {
+                val suggestionsList = mutableListOf<String>()
+                val isLatinInput = (mode == KeyboardMode.ENGLISH || mode == KeyboardMode.TRANSLIT) &&
+                                   !text.any { it in 'ऀ'..'ॿ' }
+
+                if (isLatinInput) {
+                    // 1. The Latin word exactly as typed
+                    suggestionsList.add(text)
+
+                    // 2. High-priority: Rules learned from SQLite (user's personal style)
+                    val learned = withContext(Dispatchers.IO) {
+                        db?.getLearnedRules(text.lowercase()) ?: emptyList()
+                    }
+                    learned.forEach { suggestionsList.add(it.second) }
+
+                    // 3. The transliterated version of the Latin prefix (static engine)
+                    val translitPrefix = translitEngine.flush(text.lowercase())
+                    if (translitPrefix != text) {
+                        suggestionsList.add(translitPrefix)
+
+                        // Add linguistic alternates (e.g. Anusvara vs full Nasal)
+                        BodoTranslitMappings.LINGUISTIC_ALTERNATES.forEach { (primary, alt) ->
+                            if (translitPrefix.endsWith(primary)) {
+                                suggestionsList.add(
+                                    translitPrefix.substring(0, translitPrefix.length - primary.length) + alt
+                                )
+                            }
+                        }
+                    }
+
+                    // 4. Dictionary completions based on the transliteration
+                    val completions = bodoWordList.filter {
+                        it.startsWith(translitPrefix) && it != translitPrefix
+                    }.take(3)
+                    suggestionsList.addAll(completions)
+                } else {
+                    // Devanagari input (BODO mode or already-committed TRANSLIT)
+                    val filtered = bodoWordList.filter { it.startsWith(text) }.take(3)
+                    suggestionsList.addAll(filtered)
+                    if (suggestionsList.isEmpty()) suggestionsList.addAll(bodoWordList.take(3))
+                }
+
+                suggestionsList.distinct().take(3)
+            }
+
+            _suggestions.value = result
+        }
     }
 
     // ── Learning ──────────────────────────────────────────────────────────────

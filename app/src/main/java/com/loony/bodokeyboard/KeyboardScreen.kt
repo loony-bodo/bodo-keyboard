@@ -2,7 +2,10 @@ package com.loony.bodokeyboard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -29,7 +32,7 @@ data class KeyboardState(
 
 data class KeyRowModel(
     val keys: List<String>,
-    val horizontalSpacing: Dp = 4.dp,
+    val horizontalSpacing: Dp = 7.dp,
     val verticalPadding: Dp = 0.dp,
     val horizontalPadding: Dp = 0.dp,
     val isRow2: Boolean = false 
@@ -119,14 +122,18 @@ fun KeyboardScreen(
     onSuggestionClick: (String) -> Unit,
     onSpaceDrag: (Int) -> Unit = {}
 ) {
-    val state = KeyboardState(
-        mode = viewModel.keyboardMode.value,
-        isShifted = viewModel.isShifted.value,
-        isCapsLock = viewModel.isCapsLock.value,
-        isSymbols = viewModel.isSymbols.value,
-        isSymbols2 = viewModel.isSymbols2.value,
-        isEmailField = viewModel.isEmailField.value
-    )
+    val state by remember {
+        derivedStateOf {
+            KeyboardState(
+                mode         = viewModel.keyboardMode.value,
+                isShifted    = viewModel.isShifted.value,
+                isCapsLock   = viewModel.isCapsLock.value,
+                isSymbols    = viewModel.isSymbols.value,
+                isSymbols2   = viewModel.isSymbols2.value,
+                isEmailField = viewModel.isEmailField.value
+            )
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -181,7 +188,7 @@ private fun KeyboardContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             rows.forEach { row ->
                 Row(

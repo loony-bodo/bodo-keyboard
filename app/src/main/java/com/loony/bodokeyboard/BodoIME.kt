@@ -20,6 +20,8 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.loony.bodokeyboard.data.KeyboardMode
 import com.loony.bodokeyboard.viewmodel.KeyboardViewModel
 
+private val TRAILING_WORD_RE = Regex("""\S+$""")
+
 class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
     private val lifecycleRegistry = LifecycleRegistry(this)
@@ -420,7 +422,7 @@ class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, Saved
         // 2. Identify the word-part to replace (the word currently being typed)
         val before = ic.getTextBeforeCursor(50, 0)?.toString() ?: ""
         // Matches any non-whitespace characters at the end of the string
-        val lastWordMatch = Regex("""\S+$""").find(before)
+        val lastWordMatch = TRAILING_WORD_RE.find(before)
 
         if (lastWordMatch != null) {
             ic.deleteSurroundingText(lastWordMatch.value.length, 0)

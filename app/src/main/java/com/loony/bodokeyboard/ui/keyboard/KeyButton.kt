@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,8 +81,35 @@ fun KeyButton(
     val view = LocalView.current
     var dragAccumulator by remember { mutableFloatStateOf(0f) }
 
-    if (isPressed && key == "BACKSPACE") {
-        LaunchedEffect(Unit) {
+    // rememberUpdatedState lets stable lambdas below always call the latest callback
+    // without being recreated themselves on every recomposition.
+    val currentOnClick by rememberUpdatedState(onClick)
+    val currentOnLongPress by rememberUpdatedState(onLongPress)
+    val currentOnSpaceDrag by rememberUpdatedState(onSpaceDrag)
+    val currentView by rememberUpdatedState(view)
+
+    val stableOnClick = remember {
+        {
+            if (viewModel?.hapticEnabled?.value == true)
+                currentView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            currentOnClick()
+        }
+    }
+
+    // Keyed on nullability: onLongPress is either always provided or never provided per key.
+    val stableOnLongClick = remember(onLongPress != null) {
+        if (onLongPress == null) null
+        else {
+            {
+                currentView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                currentOnLongPress?.invoke(key)
+                Unit
+            }
+        }
+    }
+
+    LaunchedEffect(isPressed) {
+        if (isPressed && key == "BACKSPACE") {
             delay(400)
             while (true) {
                 onClick()
@@ -104,7 +132,7 @@ fun KeyButton(
     }
 
     // change: key_height
-    val height = 42.dp * (viewModel?.keyboardHeightMultiplier?.value ?: 1f)
+    val height = 38.dp * (viewModel?.keyboardHeightMultiplier?.value ?: 1f)
 
     val icon: ImageVector? = when (key) {
         "BACKSPACE" -> Icons.AutoMirrored.Filled.Backspace
@@ -160,9 +188,9 @@ fun KeyButton(
                         onHorizontalDrag = { _, amount ->
                             dragAccumulator += amount
                             if (abs(dragAccumulator) > 40f) {
-                                onSpaceDrag(if (dragAccumulator > 0) 1 else -1)
+                                currentOnSpaceDrag(if (dragAccumulator > 0) 1 else -1)
                                 dragAccumulator = 0f
-                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                currentView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             }
                         }
                     )
@@ -171,17 +199,8 @@ fun KeyButton(
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication        = null,
-                onClick = {
-                    if (viewModel?.hapticEnabled?.value == true)
-                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                    onClick()
-                },
-                onLongClick = onLongPress?.let { lp ->
-                    {
-                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                        lp(key)
-                    }
-                }
+                onClick           = stableOnClick,
+                onLongClick       = stableOnLongClick,
             )
     ) {
         if (isPressed && !isSpecial && !isEnter && key != "SPACE") {
