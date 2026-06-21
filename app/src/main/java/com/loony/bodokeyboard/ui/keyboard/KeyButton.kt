@@ -103,7 +103,8 @@ fun KeyButton(
         else                   -> if (isPressed) KeyPressed else KeyNorm
     }
 
-    val height = 48.dp * (viewModel?.keyboardHeightMultiplier?.value ?: 1f)
+    // change: key_height
+    val height = 42.dp * (viewModel?.keyboardHeightMultiplier?.value ?: 1f)
 
     val icon: ImageVector? = when (key) {
         "BACKSPACE" -> Icons.AutoMirrored.Filled.Backspace

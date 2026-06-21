@@ -31,7 +31,7 @@ internal val ToolTxt    = Color(0xFFE8EAED)
 
 // ── Shapes ────────────────────────────────────────────────────────────────────
 
-internal val KeyShape      = RoundedCornerShape(10.dp) // Gboard keys are quite rounded
+internal val KeyShape      = RoundedCornerShape(6.dp) // Gboard keys are quite rounded // change: border_radius of keys
 internal val PillShape     = RoundedCornerShape(50)    // For ?123 and Enter
 internal val CircleShape   = RoundedCornerShape(50)    // For toolbar left icon
 internal val ChipShape     = RoundedCornerShape(50)
