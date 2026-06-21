@@ -357,6 +357,13 @@ class KeyboardViewModel : ViewModel() {
      * engine-recognised components and learns them individually; falls back
      * to a whole-word override when the engine output differs from the user choice.
      */
+    fun clearLearnedWords() {
+        viewModelScope.launch(Dispatchers.IO) {
+            db?.clearAll()
+            refreshEngineRules()
+        }
+    }
+
     fun learnTransliteration(latin: String, bodo: String) {
         if (latin.isEmpty() || bodo.isEmpty()) return
 

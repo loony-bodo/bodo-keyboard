@@ -129,6 +129,12 @@ class TransliterationDatabase(context: Context) : SQLiteOpenHelper(context, DATA
         writableDatabase.execSQL(query, arrayOf(latin, bodo))
     }
 
+    /** Erase all user-learned rules and restore the built-in seed data. */
+    fun clearAll() {
+        writableDatabase.delete(TABLE_NAME, null, null)
+        seedInitialRules(writableDatabase)
+    }
+
     fun deleteRule(id: Int) {
         writableDatabase.delete(TABLE_NAME, "$COLUMN_ID = ?", arrayOf(id.toString()))
     }
