@@ -69,13 +69,24 @@ class KeyboardViewModel : ViewModel() {
 
     // ── Emoji panel ───────────────────────────────────────────────────────────
 
-    /** Most-recently-used emoji, newest first. Kept in memory only. */
     val recentEmojis = mutableStateListOf<String>()
+    private var prefs: android.content.SharedPreferences? = null
+
+    fun initEmojiPrefs(context: Context) {
+        prefs = context.getSharedPreferences("emoji_prefs", Context.MODE_PRIVATE)
+        val saved = prefs?.getString("recent_emojis", "") ?: ""
+        if (saved.isNotEmpty()) {
+            recentEmojis.clear()
+            recentEmojis.addAll(saved.split(","))
+        }
+    }
 
     fun addRecentEmoji(emoji: String) {
         recentEmojis.remove(emoji)
         recentEmojis.add(0, emoji)
-        while (recentEmojis.size > 30) recentEmojis.removeAt(recentEmojis.size - 1)
+        if (recentEmojis.size > 35) recentEmojis.removeAt(recentEmojis.size - 1)
+        
+        prefs?.edit()?.putString("recent_emojis", recentEmojis.joinToString(","))?.apply()
     }
 
     // ── GIF panel ─────────────────────────────────────────────────────────────

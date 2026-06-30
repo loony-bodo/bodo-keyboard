@@ -49,6 +49,7 @@ class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, Saved
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         viewModel.initDatabase(this)
+        viewModel.initEmojiPrefs(this)
         prefs = getSharedPreferences("keyboard_settings", MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefListener)
         loadSettings()
