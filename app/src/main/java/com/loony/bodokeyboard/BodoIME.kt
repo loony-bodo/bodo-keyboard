@@ -19,6 +19,9 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.loony.bodokeyboard.data.KeyboardMode
 import com.loony.bodokeyboard.viewmodel.KeyboardViewModel
+import androidx.core.view.inputmethod.EditorInfoCompat
+import androidx.core.view.inputmethod.InputConnectionCompat
+import androidx.core.view.inputmethod.InputContentInfoCompat
 
 private val TRAILING_WORD_RE = Regex("""\S+$""")
 
@@ -172,7 +175,13 @@ class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, Saved
                 .playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD)
         }
 
-        // GIF handling
+        // Rich Content (GIF) handling
+        if (key.startsWith("content://")) {
+            handleGifCommit(android.net.Uri.parse(key))
+            return
+        }
+
+        // GIF handling (fallback or legacy)
         if (key.startsWith("http")) {
             ic.commitText(key, 1)
             return
@@ -340,6 +349,30 @@ class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, Saved
                 }
                 checkAutoCap(ic)
             }
+        }
+    }
+
+    private fun handleGifCommit(uri: android.net.Uri) {
+        val ic = currentInputConnection ?: return
+        val editorInfo = currentInputEditorInfo ?: return
+
+        // Check if the target app supports GIF
+        val mimeTypes = EditorInfoCompat.getContentMimeTypes(editorInfo)
+        val gifSupported = mimeTypes.any { it == "image/gif" }
+
+        if (gifSupported) {
+            val inputContentInfo = InputContentInfoCompat(
+                uri,
+                android.content.ClipDescription("GIF", arrayOf("image/gif")),
+                null // linkUri
+            )
+            InputConnectionCompat.commitContent(
+                ic,
+                editorInfo,
+                inputContentInfo,
+                InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION,
+                null // opts
+            )
         }
     }
 

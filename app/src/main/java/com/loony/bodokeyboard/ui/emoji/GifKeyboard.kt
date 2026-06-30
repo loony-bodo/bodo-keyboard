@@ -38,6 +38,7 @@ import com.loony.bodokeyboard.viewmodel.KeyboardViewModel
 fun GifKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
     var searchQuery by remember { mutableStateOf("") }
     var isSearching by remember { mutableStateOf(false) }
+    var isSending by remember { mutableStateOf(false) }
     
     val gifs by viewModel.gifs
     val isLoading by viewModel.isGifLoading
@@ -64,7 +65,7 @@ fun GifKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
             .background(KbBg)
             .height(if (isSearching) 360.dp else 300.dp)
     ) {
-        // Custom Search Bar UI (Doesn't trigger system keyboard)
+        // Custom Search Bar UI
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -143,10 +144,29 @@ fun GifKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                                 .height(120.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(KeyNorm)
-                                .clickable { onKeyClick(gif.url) },
+                                .clickable {
+                                    isSending = true
+                                    viewModel.downloadGif(context, gif.url) { uri ->
+                                        isSending = false
+                                        if (uri != null) {
+                                            onKeyClick(uri.toString())
+                                        }
+                                    }
+                                },
                             contentScale = ContentScale.Crop
                         )
                     }
+                }
+            }
+
+            if (isSending) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.4f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color.White)
                 }
             }
         }

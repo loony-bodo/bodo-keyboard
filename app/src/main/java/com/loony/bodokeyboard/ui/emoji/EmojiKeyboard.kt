@@ -75,12 +75,29 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
     // Skin tone state
     var longPressedEmoji by remember { mutableStateOf<String?>(null) }
 
-    // Search results logic
+    // Enhanced Search Engine: Multi-word support + Ranking (Google-style)
     val searchResults: List<String>? = searchQuery.trim().takeIf { it.isNotEmpty() }?.let { q ->
-        EMOJI_KEYWORDS.entries
-            .filter { it.key.contains(q, ignoreCase = true) }
-            .flatMap { it.value }
-            .distinct()
+        val queryTokens = q.lowercase().split("\\s+".toRegex()).filter { it.isNotEmpty() }
+        val emojiScores = mutableMapOf<String, Int>()
+
+        // 1. Invert and Match
+        for ((keyword, emojis) in EMOJI_KEYWORDS) {
+            val keywordLower = keyword.lowercase()
+            for (token in queryTokens) {
+                if (keywordLower.contains(token)) {
+                    // Match found! Boost emojis in this category.
+                    // Emojis matching multiple query words get higher scores.
+                    for (emoji in emojis) {
+                        emojiScores[emoji] = (emojiScores[emoji] ?: 0) + 1
+                    }
+                }
+            }
+        }
+
+        // 2. Sort by Relevance (Score)
+        emojiScores.entries
+            .sortedByDescending { it.value }
+            .map { it.key }
     }
 
     fun handleEmojiClick(emoji: String) {

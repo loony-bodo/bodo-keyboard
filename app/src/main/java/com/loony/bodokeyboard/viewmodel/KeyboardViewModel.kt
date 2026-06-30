@@ -22,17 +22,11 @@ import kotlinx.serialization.json.Json
 import java.net.HttpURLConnection
 import java.net.URL
 import androidx.lifecycle.viewModelScope
+import java.io.File
+import androidx.core.content.FileProvider
 
 /**
  * Holds all keyboard state and drives UI recomposition via Compose State.
- *
- * Responsibilities:
- *  - Shift / CapsLock / Symbols layout toggles
- *  - Keyboard mode switching (Bodo / English / Translit / Emoji / GIF)
- *  - Transliteration buffer management (delegates to [TransliterationEngine])
- *  - Word suggestions (static word lists + SQLite learned rules)
- *  - User preference values (haptic, sound, keyboard height)
- *  - Recently used emoji list
  */
 class KeyboardViewModel : ViewModel() {
 
@@ -138,42 +132,73 @@ class KeyboardViewModel : ViewModel() {
         }
     }
 
+    /** Downloads a GIF to the cache directory and returns a content URI for sharing. */
+    fun downloadGif(context: Context, gifUrl: String, onResult: (android.net.Uri?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val cacheDir = File(context.cacheDir, "gifs").apply { mkdirs() }
+                // Use ID or hash for filename to avoid collisions and invalid chars
+                val fileName = java.util.UUID.nameUUIDFromBytes(gifUrl.toByteArray()).toString() + ".gif"
+                val file = File(cacheDir, fileName)
+
+                if (!file.exists()) {
+                    val url = URL(gifUrl)
+                    val connection = url.openConnection() as HttpURLConnection
+                    connection.connect()
+                    
+                    if (connection.responseCode == 200) {
+                        connection.inputStream.use { input ->
+                            file.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                    }
+                }
+
+                if (file.exists()) {
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        file
+                    )
+                    withContext(Dispatchers.Main) { onResult(uri) }
+                } else {
+                    withContext(Dispatchers.Main) { onResult(null) }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { onResult(null) }
+            }
+        }
+    }
+
     // ── Transliteration ───────────────────────────────────────────────────────
 
     val translitEngine: TransliterationEngine by lazy { TransliterationEngine() }
 
-    /**
-     * Latin keystrokes accumulated since the last commit.
-     * The engine transliterates this buffer to Devanagari on each keystroke;
-     * the Devanagari is shown as composing text, not the raw Latin.
-     */
     private val _translitBuffer = mutableStateOf("")
     val translitBuffer: State<String> = _translitBuffer
 
     fun isTranslitMode(): Boolean = _keyboardMode.value == KeyboardMode.TRANSLIT
 
-    /** Append [char] to the Latin buffer; return a Result whose [pending] is the Devanagari composing text. */
     fun feedTranslit(char: Char): TransliterationEngine.Result {
         val result = translitEngine.feed(_translitBuffer.value, char)
         _translitBuffer.value = _translitBuffer.value + char
         return result
     }
 
-    /** Remove the last Latin keystroke; return the Devanagari equivalent of the remaining buffer. */
     fun translitBackspace(): String {
         val newLatin = translitEngine.backspace(_translitBuffer.value)
         _translitBuffer.value = newLatin
         return translitEngine.flush(newLatin)
     }
 
-    /** Flush the Latin buffer to Devanagari and clear it. */
     fun flushTranslit(): String {
         val committed = translitEngine.flush(_translitBuffer.value)
         _translitBuffer.value = ""
         return committed
     }
 
-    /** Clear without committing (mode switch, field change, etc.). */
     fun clearTranslitBuffer() {
         _translitBuffer.value = ""
     }
@@ -222,7 +247,6 @@ class KeyboardViewModel : ViewModel() {
                 _isShifted.value  = false
             }
             _isShifted.value && (now - lastShiftTime) < 400L -> {
-                // Double-tap → CapsLock
                 _isCapsLock.value = true
             }
             else -> _isShifted.value = !_isShifted.value
@@ -234,7 +258,6 @@ class KeyboardViewModel : ViewModel() {
         _isShifted.value = shifted
     }
 
-    /** Drop Shift after a printable key is typed, unless CapsLock is active. */
     fun autoResetShift() {
         if (_isShifted.value && !_isCapsLock.value) _isShifted.value = false
     }
@@ -298,7 +321,6 @@ class KeyboardViewModel : ViewModel() {
     fun updateSuggestions(text: String) {
         suggestionsJob?.cancel()
         suggestionsJob = viewModelScope.launch {
-            // Debounce: skip intermediate keystrokes when typing fast.
             if (text.isNotEmpty()) delay(50)
 
             if (!suggestionsEnabled.value) {
@@ -318,21 +340,15 @@ class KeyboardViewModel : ViewModel() {
                                    !text.any { it in 'ऀ'..'ॿ' }
 
                 if (isLatinInput) {
-                    // 1. The Latin word exactly as typed
                     suggestionsList.add(text)
-
-                    // 2. High-priority: Rules learned from SQLite (user's personal style)
                     val learned = withContext(Dispatchers.IO) {
                         db?.getLearnedRules(text.lowercase()) ?: emptyList()
                     }
                     learned.forEach { suggestionsList.add(it.second) }
 
-                    // 3. The transliterated version of the Latin prefix (static engine)
                     val translitPrefix = translitEngine.flush(text.lowercase())
                     if (translitPrefix != text) {
                         suggestionsList.add(translitPrefix)
-
-                        // Add linguistic alternates (e.g. Anusvara vs full Nasal)
                         BodoTranslitMappings.LINGUISTIC_ALTERNATES.forEach { (primary, alt) ->
                             if (translitPrefix.endsWith(primary)) {
                                 suggestionsList.add(
@@ -341,14 +357,11 @@ class KeyboardViewModel : ViewModel() {
                             }
                         }
                     }
-
-                    // 4. Dictionary completions based on the transliteration
                     val completions = bodoWordList.filter {
                         it.startsWith(translitPrefix) && it != translitPrefix
                     }.take(3)
                     suggestionsList.addAll(completions)
                 } else {
-                    // Devanagari input (BODO mode or already-committed TRANSLIT)
                     val filtered = bodoWordList.filter { it.startsWith(text) }.take(3)
                     suggestionsList.addAll(filtered)
                     if (suggestionsList.isEmpty()) suggestionsList.addAll(bodoWordList.take(3))
@@ -363,11 +376,6 @@ class KeyboardViewModel : ViewModel() {
 
     // ── Learning ──────────────────────────────────────────────────────────────
 
-    /**
-     * Record a successful transliteration. Breaks the Latin input into
-     * engine-recognised components and learns them individually; falls back
-     * to a whole-word override when the engine output differs from the user choice.
-     */
     fun clearLearnedWords() {
         viewModelScope.launch(Dispatchers.IO) {
             db?.clearAll()
@@ -382,10 +390,8 @@ class KeyboardViewModel : ViewModel() {
         val defaultBodo = translitEngine.flush(latin.lowercase())
 
         if (defaultBodo == bodo) {
-            // Engine got it right — boost confidence of each sub-component
             components.forEach { (lPart, bPart) -> db?.learn(lPart, bPart) }
         } else {
-            // User chose a different output — store as a whole-word override
             db?.learn(latin.lowercase(), bodo)
         }
 
