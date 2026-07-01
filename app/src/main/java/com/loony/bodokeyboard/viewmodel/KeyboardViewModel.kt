@@ -60,6 +60,7 @@ class KeyboardViewModel : ViewModel() {
 
     private val _keyboardMode = mutableStateOf(KeyboardMode.ENGLISH)
     val keyboardMode: State<KeyboardMode> = _keyboardMode
+    private var lastTextMode = KeyboardMode.ENGLISH
 
     // ── Emoji panel ───────────────────────────────────────────────────────────
 
@@ -232,7 +233,12 @@ class KeyboardViewModel : ViewModel() {
             (inputType and EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS) != 0 ||
             (inputType and EditorInfo.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS) != 0
 
-        if ((inputType and EditorInfo.TYPE_CLASS_NUMBER) != 0) _isSymbols.value = true
+        val baseType = inputType and EditorInfo.TYPE_MASK_CLASS
+        if (baseType == EditorInfo.TYPE_CLASS_NUMBER || baseType == EditorInfo.TYPE_CLASS_PHONE) {
+            _keyboardMode.value = KeyboardMode.NUMERIC
+        } else if (_keyboardMode.value == KeyboardMode.NUMERIC) {
+            _keyboardMode.value = lastTextMode
+        }
     }
 
     // ── Shift / CapsLock ──────────────────────────────────────────────────────
@@ -284,6 +290,9 @@ class KeyboardViewModel : ViewModel() {
 
     fun setMode(mode: KeyboardMode) {
         _keyboardMode.value   = mode
+        if (mode == KeyboardMode.BODO || mode == KeyboardMode.ENGLISH || mode == KeyboardMode.TRANSLIT) {
+            lastTextMode = mode
+        }
         _isSymbols.value      = false
         _isSymbols2.value     = false
         _isShifted.value      = false

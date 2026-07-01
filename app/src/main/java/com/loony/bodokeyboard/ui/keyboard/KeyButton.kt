@@ -151,13 +151,16 @@ fun KeyButton(
             KeyboardMode.BODO     -> "बर'"
             KeyboardMode.TRANSLIT -> "बर' (Translit)"
             KeyboardMode.ENGLISH  -> "English"
+            KeyboardMode.NUMERIC  -> "Space"
             else                  -> ""
         }
         "SYM"          -> "?123"
         "SYM_PAGE"     -> if (viewModel?.isSymbols2?.value == true) "?123" else "=\\<"
         "ABC"          -> "ABC"
+        "BACKSPACE"    -> ""
         "MODE_SWITCH"  -> if (mode == KeyboardMode.BODO) "EN" else "बर'"
         "EMOJI_SWITCH" -> "😊"
+        "ENTER"        -> ""
         else           -> key
     }
 

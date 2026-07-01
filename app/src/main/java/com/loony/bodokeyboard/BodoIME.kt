@@ -275,7 +275,9 @@ class BodoIME : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, Saved
             "SYM_PAGE" -> viewModel.toggleSymbolsPage()
 
             "ABC" -> {
-                if (viewModel.keyboardMode.value == KeyboardMode.EMOJI || viewModel.keyboardMode.value == KeyboardMode.GIF) {
+                if (viewModel.keyboardMode.value == KeyboardMode.EMOJI || 
+                    viewModel.keyboardMode.value == KeyboardMode.GIF ||
+                    viewModel.keyboardMode.value == KeyboardMode.NUMERIC) {
                     viewModel.setMode(KeyboardMode.ENGLISH)
                 } else {
                     viewModel.resetSymbols()

@@ -108,7 +108,17 @@ private class BodoLayout(
     )
 }
 
+private class NumericLayout : KeyboardLayout {
+    override fun rows() = listOf(
+        KeyRowModel(keys = listOf("1", "2", "3"), isRow2 = true),
+        KeyRowModel(keys = listOf("4", "5", "6"), isRow2 = true),
+        KeyRowModel(keys = listOf("7", "8", "9"), isRow2 = true),
+        KeyRowModel(keys = listOf("ABC", "SPACE", "0", "BACKSPACE", "ENTER"))
+    )
+}
+
 private fun resolveLayout(state: KeyboardState): KeyboardLayout = when {
+    state.mode == KeyboardMode.NUMERIC -> NumericLayout()
     state.isSymbols2 -> Symbols2Layout()
     state.isSymbols  -> SymbolsLayout()
     state.isQwerty   -> EnglishLayout(state.isShifted, state.isEmailField)
@@ -201,7 +211,7 @@ private fun KeyboardContent(
                         KeyButton(
                             key = key,
                             hint = if (state.isQwerty && !state.isSymbols && rows.first() == row) getHint(key) else null,
-                            modifier = Modifier.weight(keyWeight(key)),
+                            modifier = Modifier.weight(keyWeight(key, state.mode)),
                             mode = state.mode,
                             isCapsLock = state.isCapsLock,
                             viewModel = viewModel,
@@ -224,11 +234,19 @@ private fun getHint(key: String): String? = when(key.lowercase()) {
     else -> null
 }
 
-private fun keyWeight(key: String): Float = when (key) {
-    "SPACE" -> 4.5f
-    "ENTER" -> 1.5f
-    "SHIFT", "BACKSPACE", "SYM", "ABC" -> 1.5f
-    "MODE_SWITCH", "EMOJI_SWITCH" -> 1.0f
-    "SYM_PAGE", ".com" -> 1.2f
-    else -> 1f
+private fun keyWeight(key: String, mode: KeyboardMode): Float {
+    if (mode == KeyboardMode.NUMERIC) {
+        return when (key) {
+            "ABC", "ENTER" -> 0.5f
+            else -> 1f
+        }
+    }
+    return when (key) {
+        "SPACE" -> 4.5f
+        "ENTER" -> 1.5f
+        "SHIFT", "BACKSPACE", "SYM", "ABC" -> 1.5f
+        "MODE_SWITCH", "EMOJI_SWITCH" -> 1.0f
+        "SYM_PAGE", ".com" -> 1.2f
+        else -> 1f
+    }
 }
