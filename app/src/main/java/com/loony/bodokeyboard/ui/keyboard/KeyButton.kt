@@ -231,7 +231,12 @@ fun KeyButton(
         if (icon != null) {
             Icon(
                 imageVector        = icon,
-                contentDescription = null,
+                contentDescription = when (key) {
+                    "BACKSPACE" -> "Backspace"
+                    "ENTER"     -> "Enter"
+                    "SHIFT"     -> "Shift"
+                    else        -> null
+                },
                 tint               = contentColor,
                 modifier           = Modifier.align(Alignment.Center).size(24.dp)
             )

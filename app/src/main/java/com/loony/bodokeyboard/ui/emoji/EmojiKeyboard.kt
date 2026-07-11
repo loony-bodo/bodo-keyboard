@@ -206,6 +206,7 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                         item {
                             EmojiTab(
                                 icon       = Icons.Default.AccessTime,
+                                description = "Recently used emoji",
                                 isSelected = activeCategory == -1,
                                 onClick    = {
                                     scope.launch { gridState.scrollToItem(categoryStartIndices[-1] ?: 0) }
@@ -215,6 +216,7 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                         itemsIndexed(EMOJI_CATEGORY_ICONS) { idx, icon ->
                             EmojiTab(
                                 icon       = icon,
+                                description = EMOJI_CATEGORY_NAMES.getOrElse(idx) { "Emoji category" },
                                 isSelected = activeCategory == idx,
                                 onClick    = {
                                     scope.launch { gridState.scrollToItem(categoryStartIndices[idx] ?: 0) }
@@ -244,8 +246,8 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                     ) {
                         val haptic = viewModel.hapticEnabled.value
                         if (isSearching && searchResults != null) {
-                            items(searchResults) { emoji ->
-                                EmojiCell(emoji, haptic, 
+                            items(searchResults, key = { it }) { emoji ->
+                                EmojiCell(emoji, haptic,
                                     onClick = { handleEmojiClick(it) },
                                     onLongPress = { longPressedEmoji = it }
                                 )
@@ -262,8 +264,8 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                                     }
                                 }
                             } else {
-                                items(viewModel.recentEmojis) { emoji ->
-                                    EmojiCell(emoji, haptic, 
+                                items(viewModel.recentEmojis, key = { "recent_$it" }) { emoji ->
+                                    EmojiCell(emoji, haptic,
                                         onClick = { handleEmojiClick(it) },
                                         onLongPress = { longPressedEmoji = it }
                                     )
@@ -271,12 +273,12 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                             }
 
                             // Categories Sections
-                            EMOJI_CATEGORIES.forEachIndexed { _, pair ->
+                            EMOJI_CATEGORIES.forEachIndexed { catIdx, pair ->
                                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(7) }) {
                                     SectionHeader(pair.first)
                                 }
-                                items(pair.second) { emoji ->
-                                    EmojiCell(emoji, haptic, 
+                                items(pair.second, key = { "cat${catIdx}_$it" }) { emoji ->
+                                    EmojiCell(emoji, haptic,
                                         onClick = { handleEmojiClick(it) },
                                         onLongPress = { longPressedEmoji = it }
                                     )
@@ -380,8 +382,8 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                     )
                     
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ToolBtn(icon = Icons.Default.ContentPaste) { onKeyClick("PASTE") }
-                        ToolBtn(icon = Icons.Default.EmojiEmotions, isHighlight = true) { /* emoji */ }
+                        ToolBtn(icon = Icons.Default.ContentPaste, contentDescription = "Paste") { onKeyClick("PASTE") }
+                        ToolBtn(icon = Icons.Default.EmojiEmotions, contentDescription = "Emoji keyboard", isHighlight = true) { /* emoji */ }
                         ToolBtn(label = "GIF") { onKeyClick("GIF_SWITCH") }
                     }
 
@@ -408,9 +410,15 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
     }
 }
 
+/** Category names, in the same order as [EMOJI_CATEGORY_ICONS]. */
+private val EMOJI_CATEGORY_NAMES = listOf(
+    "Smileys & emotion", "People & body", "Animals & nature", "Food & drink",
+    "Activities", "Travel & places", "Objects", "Symbols"
+)
+
 /** A single category icon tab in the emoji panel. */
 @Composable
-private fun EmojiTab(icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
+private fun EmojiTab(icon: ImageVector, description: String, isSelected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .size(32.dp)
@@ -421,7 +429,7 @@ private fun EmojiTab(icon: ImageVector, isSelected: Boolean, onClick: () -> Unit
     ) {
         Icon(
             imageVector        = icon,
-            contentDescription = null,
+            contentDescription = description,
             tint               = if (isSelected) EnterBg else androidx.compose.ui.graphics.Color.White,
             modifier           = Modifier.size(18.dp)
         )
@@ -471,7 +479,7 @@ private fun EmojiCell(
             ),
         contentAlignment = Alignment.Center
     ) {
-        Text(emoji, fontSize = 28.sp)
+        Text(emoji, fontSize = 32.sp)
     }
 }
 
@@ -502,7 +510,7 @@ private fun SkinTonePopup(baseEmoji: String, onSelect: (String) -> Unit, onDismi
                         .clickable { onSelect(variant) },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(variant, fontSize = 28.sp)
+                    Text(variant, fontSize = 32.sp)
                 }
             }
         }

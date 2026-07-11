@@ -33,15 +33,17 @@ class KeyboardViewModel : ViewModel() {
     private var db: TransliterationDatabase? = null
 
     fun initDatabase(context: Context) {
-        if (db == null) {
-            db = TransliterationDatabase(context)
-            refreshEngineRules()
-        }
+        if (db != null) return
+        db = TransliterationDatabase(context)
+        // Opening/seeding SQLite is disk I/O; keep it off the main thread.
+        viewModelScope.launch(Dispatchers.IO) { refreshEngineRules() }
     }
 
+    /** Only "stable" (usage_count >= 3) rules become engine overrides — a single
+     *  mis-tap shouldn't permanently hijack a word's default transliteration. */
     private fun refreshEngineRules() {
-        val learnedRules = db?.getAllRules() ?: emptyList()
-        translitEngine.updateRules(learnedRules.associate { it.latin to it.bodo })
+        val stableRules = db?.getStableRules() ?: emptyMap()
+        translitEngine.updateRules(stableRules)
     }
 
     // ── Layout state ──────────────────────────────────────────────────────────
@@ -92,16 +94,26 @@ class KeyboardViewModel : ViewModel() {
     private val _isGifLoading = mutableStateOf(false)
     val isGifLoading: State<Boolean> = _isGifLoading
 
+    private val _gifError = mutableStateOf(false)
+    val gifError: State<Boolean> = _gifError
+
     private var gifSearchJob: Job? = null
+    private var lastGifQuery: String = ""
+
+    private companion object {
+        const val NETWORK_TIMEOUT_MS = 10_000
+    }
 
     fun searchGifs(query: String) {
+        lastGifQuery = query
         gifSearchJob?.cancel()
-        
+
         gifSearchJob = viewModelScope.launch(Dispatchers.IO) {
             if (query.isNotEmpty()) {
                 delay(500) // Debounce for search
             }
             _isGifLoading.value = true
+            _gifError.value = false
             try {
                 val apiKey = BuildConfig.GIPHY_API_KEY
                 val urlString = if (query.isEmpty()) {
@@ -111,6 +123,8 @@ class KeyboardViewModel : ViewModel() {
                 }
                 val url = URL(urlString)
                 val connection = url.openConnection() as HttpURLConnection
+                connection.connectTimeout = NETWORK_TIMEOUT_MS
+                connection.readTimeout = NETWORK_TIMEOUT_MS
                 connection.requestMethod = "GET"
                 connection.connect()
 
@@ -124,14 +138,20 @@ class KeyboardViewModel : ViewModel() {
                             previewUrl = it.images.preview_gif.url
                         )
                     }
+                } else {
+                    _gifError.value = true
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                _gifError.value = true
             } finally {
                 _isGifLoading.value = false
             }
         }
     }
+
+    /** Retries the most recent search/trending fetch after a failure. */
+    fun retryGifs() = searchGifs(lastGifQuery)
 
     /** Downloads a GIF to the cache directory and returns a content URI for sharing. */
     fun downloadGif(context: Context, gifUrl: String, onResult: (android.net.Uri?) -> Unit) {
@@ -145,6 +165,8 @@ class KeyboardViewModel : ViewModel() {
                 if (!file.exists()) {
                     val url = URL(gifUrl)
                     val connection = url.openConnection() as HttpURLConnection
+                    connection.connectTimeout = NETWORK_TIMEOUT_MS
+                    connection.readTimeout = NETWORK_TIMEOUT_MS
                     connection.connect()
                     
                     if (connection.responseCode == 200) {
@@ -395,15 +417,17 @@ class KeyboardViewModel : ViewModel() {
     fun learnTransliteration(latin: String, bodo: String) {
         if (latin.isEmpty() || bodo.isEmpty()) return
 
-        val components  = translitEngine.decompose(latin.lowercase())
-        val defaultBodo = translitEngine.flush(latin.lowercase())
+        viewModelScope.launch(Dispatchers.IO) {
+            val components  = translitEngine.decompose(latin.lowercase())
+            val defaultBodo = translitEngine.flush(latin.lowercase())
 
-        if (defaultBodo == bodo) {
-            components.forEach { (lPart, bPart) -> db?.learn(lPart, bPart) }
-        } else {
-            db?.learn(latin.lowercase(), bodo)
+            if (defaultBodo == bodo) {
+                components.forEach { (lPart, bPart) -> db?.learn(lPart, bPart) }
+            } else {
+                db?.learn(latin.lowercase(), bodo)
+            }
+
+            refreshEngineRules()
         }
-
-        refreshEngineRules()
     }
 }

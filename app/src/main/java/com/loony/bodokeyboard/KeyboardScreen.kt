@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -117,6 +119,29 @@ private class NumericLayout : KeyboardLayout {
     )
 }
 
+/** Accented Latin alternates offered on long-press, keyed by lowercase base letter. */
+private val ALTERNATE_CHARS: Map<String, List<String>> = mapOf(
+    "a" to listOf("à", "á", "â", "ã", "ä", "å", "ā"),
+    "e" to listOf("è", "é", "ê", "ë", "ē"),
+    "i" to listOf("ì", "í", "î", "ï", "ī"),
+    "o" to listOf("ò", "ó", "ô", "õ", "ö", "ø", "ō"),
+    "u" to listOf("ù", "ú", "û", "ü", "ū"),
+    "n" to listOf("ñ"),
+    "c" to listOf("ç", "ć"),
+    "s" to listOf("ś", "š"),
+    "y" to listOf("ý", "ÿ"),
+    "z" to listOf("ź", "ž", "ż"),
+    "g" to listOf("ğ"),
+    "l" to listOf("ł")
+)
+
+private fun alternatesFor(key: String): List<String> {
+    if (key.length != 1) return emptyList()
+    val lower = key.lowercase()
+    val alts = ALTERNATE_CHARS[lower] ?: return emptyList()
+    return if (key == lower) alts else alts.map { it.uppercase() }
+}
+
 private fun resolveLayout(state: KeyboardState): KeyboardLayout = when {
     state.mode == KeyboardMode.NUMERIC -> NumericLayout()
     state.isSymbols2 -> Symbols2Layout()
@@ -169,20 +194,21 @@ private fun KeyboardContent(
 ) {
     val layout = remember(state) { resolveLayout(state) }
     val rows = layout.rows()
+    var longPressedKey by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 4.dp)
     ) {
-        if (viewModel.suggestionsEnabled.value) {
+        if (viewModel.suggestionsEnabled.value || longPressedKey != null) {
             SuggestionBar(
                 suggestions = viewModel.suggestions.value,
-                longPressKey = null,
-                longPressAlts = emptyList(),
+                longPressKey = longPressedKey,
+                longPressAlts = longPressedKey?.let { alternatesFor(it) } ?: emptyList(),
                 onSuggestion = onSuggestionClick,
-                onAlternate = onKeyClick,
-                onDismissAlts = {}
+                onAlternate = { alt -> onKeyClick(alt); longPressedKey = null },
+                onDismissAlts = { longPressedKey = null }
             )
         }
 
@@ -208,6 +234,7 @@ private fun KeyboardContent(
                     if (row.isRow2) Spacer(Modifier.weight(0.5f))
 
                     row.keys.forEach { key ->
+                        val hasAlternates = alternatesFor(key).isNotEmpty()
                         KeyButton(
                             key = key,
                             hint = if (state.isQwerty && !state.isSymbols && rows.first() == row) getHint(key) else null,
@@ -216,7 +243,11 @@ private fun KeyboardContent(
                             isCapsLock = state.isCapsLock,
                             viewModel = viewModel,
                             onSpaceDrag = onSpaceDrag,
-                            onLongPress = { k -> onKeyClick(k) },
+                            // Only keys with accented alternates get a long-press
+                            // handler — SPACE needs its drag gesture free of
+                            // competing long-click detection, and BACKSPACE
+                            // already auto-repeats on hold.
+                            onLongPress = if (hasAlternates) { k -> longPressedKey = k } else null,
                             onClick = { onKeyClick(key) }
                         )
                     }

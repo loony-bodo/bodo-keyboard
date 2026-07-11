@@ -64,7 +64,7 @@ internal fun ToolbarRow(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = null,
+                contentDescription = "Collapse keyboard",
                 tint = KeyTxtDark,
                 modifier = Modifier.size(18.dp)
             )
@@ -78,6 +78,7 @@ internal fun ToolbarRow(
         ) {
             ToolBtn(
                 icon = Icons.Default.AutoAwesome,
+                contentDescription = "Toggle suggestions",
                 isHighlight = isSuggestionsEnabled
             ) { onKeyClick("SUGGESTION_TOGGLE") }
 
@@ -88,10 +89,10 @@ internal fun ToolbarRow(
                 LangBtn("बर'") { onKeyClick("SWITCH_BODO") }
             }
 
-            ToolBtn(icon = Icons.Default.EmojiEmotions) { onKeyClick("EMOJI_SWITCH") }
+            ToolBtn(icon = Icons.Default.EmojiEmotions, contentDescription = "Switch to emoji keyboard") { onKeyClick("EMOJI_SWITCH") }
 
             ToolBtn(label = "GIF") { onKeyClick("GIF_SWITCH") }
-            ToolBtn(icon = Icons.AutoMirrored.Filled.Assignment) { onKeyClick("PASTE") }
+            ToolBtn(icon = Icons.AutoMirrored.Filled.Assignment, contentDescription = "Paste") { onKeyClick("PASTE") }
         }
 
         // Divider and more
@@ -102,8 +103,8 @@ internal fun ToolbarRow(
                     .height(20.dp)
                     .background(DividerC)
             )
-            ToolBtn(icon = Icons.Default.MoreHoriz) { onKeyClick("SETTINGS_OPEN") }
-            ToolBtn(icon = Icons.Default.Mic) { /* voice */ }
+            ToolBtn(icon = Icons.Default.MoreHoriz, contentDescription = "Open settings") { onKeyClick("SETTINGS_OPEN") }
+            ToolBtn(icon = Icons.Default.Mic, contentDescription = "Voice input") { /* voice */ }
         }
     }
 }
@@ -126,6 +127,7 @@ private fun LangBtn(label: String, onClick: () -> Unit) {
 internal fun ToolBtn(
     icon: ImageVector? = null,
     label: String? = null,
+    contentDescription: String? = null,
     isHighlight: Boolean = false,
     onClick: () -> Unit = {},
 ) {
@@ -142,7 +144,7 @@ internal fun ToolBtn(
         if (icon != null) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = contentDescription,
                 tint = if (isHighlight) AccentMint else KeyTxt,
                 modifier = Modifier.size(ToolIconSize)
             )

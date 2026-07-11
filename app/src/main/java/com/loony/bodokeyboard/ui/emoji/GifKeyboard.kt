@@ -42,6 +42,7 @@ fun GifKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
     
     val gifs by viewModel.gifs
     val isLoading by viewModel.isGifLoading
+    val gifError by viewModel.gifError
     val context = LocalContext.current
 
     val imageLoader = remember {
@@ -54,6 +55,17 @@ fun GifKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                 }
             }
             .build()
+    }
+    DisposableEffect(imageLoader) {
+        onDispose { imageLoader.shutdown() }
+    }
+
+    // Downloads run in the ViewModel's scope, which outlives this composable —
+    // this flag stops a late completion from committing a GIF after the user
+    // has already navigated away from the GIF panel.
+    val isActive = remember { mutableStateOf(true) }
+    DisposableEffect(Unit) {
+        onDispose { isActive.value = false }
     }
 
     LaunchedEffect(searchQuery) {
@@ -118,11 +130,27 @@ fun GifKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                     color = ToolTxt
                 )
             } else if (gifs.isEmpty()) {
-                Text(
-                    if (searchQuery.isEmpty()) "Loading trending..." else "No GIFs found",
+                Column(
                     modifier = Modifier.align(Alignment.Center),
-                    color = ToolTxt
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        when {
+                            gifError -> "Couldn't load GIFs"
+                            searchQuery.isEmpty() -> "Loading trending..."
+                            else -> "No GIFs found"
+                        },
+                        color = ToolTxt
+                    )
+                    if (gifError) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Tap to retry",
+                            color = ToolTxt,
+                            modifier = Modifier.clickable { viewModel.retryGifs() }
+                        )
+                    }
+                }
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
@@ -147,9 +175,11 @@ fun GifKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                                 .clickable {
                                     isSending = true
                                     viewModel.downloadGif(context, gif.url) { uri ->
-                                        isSending = false
-                                        if (uri != null) {
-                                            onKeyClick(uri.toString())
+                                        if (isActive.value) {
+                                            isSending = false
+                                            if (uri != null) {
+                                                onKeyClick(uri.toString())
+                                            }
                                         }
                                     }
                                 },

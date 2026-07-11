@@ -197,11 +197,13 @@ class TransliterationEngine {
 
     // ── Custom / learned rules ────────────────────────────────────────────────
 
-    private val customRules = mutableMapOf<String, String>()
+    // Replaced wholesale (never mutated in place) so concurrent reads from
+    // transliterate() never observe a partially-cleared map.
+    @Volatile
+    private var customRules: Map<String, String> = emptyMap()
 
     fun updateRules(rules: Map<String, String>) {
-        customRules.clear()
-        customRules.putAll(rules)
+        customRules = rules
     }
 
     // ── Streaming interface for BodoIME ───────────────────────────────────────

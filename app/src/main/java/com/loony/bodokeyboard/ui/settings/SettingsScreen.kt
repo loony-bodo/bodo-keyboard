@@ -49,6 +49,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +79,10 @@ fun SettingsView() {
     val context = LocalContext.current
     val vm: KeyboardViewModel = viewModel()
     val prefs = remember { context.getSharedPreferences("keyboard_settings", Context.MODE_PRIVATE) }
+
+    // "Clear learned words" needs the DB open; Settings can be opened without
+    // ever visiting "Try It" first, which is the only other place that initializes it.
+    LaunchedEffect(Unit) { vm.initDatabase(context) }
 
     // ── Preferences ───────────────────────────────────────────────────────────
     var haptic       by remember { mutableStateOf(prefs.getBoolean("haptic", true)) }

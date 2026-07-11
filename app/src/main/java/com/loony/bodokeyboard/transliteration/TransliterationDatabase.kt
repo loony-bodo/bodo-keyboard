@@ -41,8 +41,17 @@ class TransliterationDatabase(context: Context) : SQLiteOpenHelper(context, DATA
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
-        onCreate(db)
+        // No destructive migrations: never drop learned_rules, or every future
+        // version bump would silently wipe all user-learned corrections.
+        // Add real ALTER TABLE migrations here as the schema evolves.
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS $TABLE_NAME (" +
+            "$COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            "$COLUMN_LATIN TEXT, " +
+            "$COLUMN_BODO TEXT, " +
+            "$COLUMN_USAGE_COUNT INTEGER, " +
+            "UNIQUE($COLUMN_LATIN, $COLUMN_BODO))"
+        )
     }
 
     /** Populate the database with high-frequency Bodo words on first install. */
