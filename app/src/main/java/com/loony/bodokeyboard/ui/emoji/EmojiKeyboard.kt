@@ -75,6 +75,14 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
     // Skin tone state
     var longPressedEmoji by remember { mutableStateOf<String?>(null) }
 
+    // Freeze the recents order for the lifetime of this panel instance. Without
+    // this, tapping an emoji moves it to slot 1 immediately (addRecentEmoji),
+    // reshuffling the grid under the user's next tap — a quick double-tap on
+    // the 7th emoji would actually hit whatever slid into that position after
+    // the first tap. The live order is still persisted via addRecentEmoji; it
+    // just isn't reflected here until the emoji panel is reopened.
+    val recentEmojisSnapshot = remember { viewModel.recentEmojis.toList() }
+
     // Enhanced Search Engine: Multi-word support + Ranking (Google-style)
     val searchResults: List<String>? = searchQuery.trim().takeIf { it.isNotEmpty() }?.let { q ->
         val queryTokens = q.lowercase().split("\\s+".toRegex()).filter { it.isNotEmpty() }
@@ -107,14 +115,14 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
     }
 
     // Indices for continuous scroll mapping
-    val categoryStartIndices = remember(viewModel.recentEmojis.size) {
-        val indices = mutableMapOf<Int, Int>() 
+    val categoryStartIndices = remember {
+        val indices = mutableMapOf<Int, Int>()
         var currentIdx = 0
-        
+
         // Recently used
         indices[-1] = 0
-        currentIdx += 1 + viewModel.recentEmojis.size 
-        
+        currentIdx += 1 + recentEmojisSnapshot.size
+
         EMOJI_CATEGORIES.forEachIndexed { idx, pair ->
             indices[idx] = currentIdx
             currentIdx += 1 + pair.second.size
@@ -257,14 +265,14 @@ fun EmojiKeyboard(viewModel: KeyboardViewModel, onKeyClick: (String) -> Unit) {
                             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(7) }) {
                                 SectionHeader("RECENTLY USED")
                             }
-                            if (viewModel.recentEmojis.isEmpty()) {
+                            if (recentEmojisSnapshot.isEmpty()) {
                                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(7) }) {
                                     Box(Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
                                         Text("No recently used emoji", color = ToolTxt.copy(alpha = 0.5f), fontSize = 12.sp)
                                     }
                                 }
                             } else {
-                                items(viewModel.recentEmojis, key = { "recent_$it" }) { emoji ->
+                                items(recentEmojisSnapshot, key = { "recent_$it" }) { emoji ->
                                     EmojiCell(emoji, haptic,
                                         onClick = { handleEmojiClick(it) },
                                         onLongPress = { longPressedEmoji = it }
